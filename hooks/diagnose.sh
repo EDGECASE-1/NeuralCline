@@ -483,6 +483,35 @@ check_session_memory() {
     fi
 }
 
+# 🔧 ─── 20. Shell hooks (NEW) ─────────────────────────────────────────────
+check_shell_hooks() {
+    local check="Shell hooks — is shell-hooks.sh installed and active?"
+
+    local hooks_file="/root/.session-state/shell-hooks.sh"
+    if [ ! -f "$hooks_file" ]; then
+        record "$check" "fail" "shell-hooks.sh not found at $hooks_file"
+        return
+    fi
+
+    if [ ! -x "$hooks_file" ]; then
+        record "$check" "warn" "shell-hooks.sh exists but not executable"
+    fi
+
+    # Check if hooks are installed in this shell session
+    if [ "${__NEURAL_HOOKS_INSTALLED:-}" = "1" ]; then
+        record "$check" "pass" "Shell hooks active (__NEURAL_HOOKS_INSTALLED=1)"
+    elif declare -F __neural_preexec &>/dev/null && declare -F __neural_precmd &>/dev/null; then
+        record "$check" "pass" "Shell functions __neural_preexec/__neural_precmd defined"
+    else
+        record "$check" "info" "Shell hooks installed but not active in current shell (will activate on next login)"
+    fi
+
+    # Check if .bashrc sources it
+    if grep -q "shell-hooks.sh" /root/.bashrc 2>/dev/null; then
+        : # already checked in bashrc check
+    fi
+}
+
 # ===================== RUN ALL CHECKS =====================
 
 check_state_freshness
@@ -504,6 +533,7 @@ check_eef_health
 check_timeout_proximity
 check_self_learning
 check_session_memory
+check_shell_hooks
 
 # ===================== LOG THE DIAGNOSTIC =====================
 
