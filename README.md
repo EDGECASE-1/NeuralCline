@@ -442,6 +442,50 @@ Backup created at: `<globalState.json>.backup`
 
 ---
 
+## 🚀 Launch Automation
+
+The launch pipeline is fully automated via `gh` CLI. No browser needed.
+
+### Quick Start
+
+```bash
+# Step 1: Create GitHub Discussion, Issues, Pages, and launch content
+bash /root/NeuralCline/launch/automation/02-launch-orchestrator.sh
+
+# Step 2: Prepare external platform content (Reddit, HN, PH)
+bash /root/NeuralCline/launch/automation/03-external-launch.sh
+
+# Step 3: Check real-time metrics
+bash /root/NeuralCline/launch/automation/04-check-metrics.sh
+```
+
+### What It Creates
+
+| Channel | Tool | Automation |
+|---------|------|-----------|
+| GitHub Discussion | `gh api graphql` | ✅ Fully automated |
+| GitHub Issues (6) | `gh issue create` | ✅ Fully automated |
+| GitHub Pages | `gh api pages` | ✅ Fully automated |
+| Reddit | `gh issue create` (content) + PRAW | ✅ Content prepared, OAuth needed |
+| Hacker News | `gh issue create` (content) | ✅ Content prepared, manual submit |
+| Product Hunt | `gh issue create` (content) | ✅ Content prepared, manual submit |
+
+### Files
+
+- `launch/automation/01-create-discussion.sh` — Creates the launch announcement
+- `launch/automation/02-launch-orchestrator.sh` — Full GH pipeline (Discussion, Issues, Pages)
+- `launch/automation/03-external-launch.sh` — External platform content preparation
+- `launch/automation/04-check-metrics.sh` — Real-time metrics dashboard
+- `launch/automation/create_discussion.py` — Python GraphQL client for Discussions
+- `launch/automation/discussion-body.md` — Launch post body content
+- `launch/launch_reddit.py` — Reddit posting script (requires OAuth setup)
+- `launch/EXECUTIVE_BRIEF.md` — Business case documentation
+- `launch/MARKET_MAP.md` — Market analysis ($12.9B TAM)
+- `launch/PROJECTION_METRICS.md` — Growth projections
+- `launch/LAUNCH_POSTS.md` — All launch post content
+
+---
+
 ## 🧠 EDGECASE — The Mission
 
 NeuralCline is the first release from **EDGECASE**, a project dedicated to documenting and fixing the unanticipated failure modes of AI coding tools.
