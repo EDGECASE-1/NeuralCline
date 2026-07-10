@@ -1,0 +1,113 @@
+name: NeuralCline Syndication Engine
+
+on:
+  schedule:
+    # Run every 6 hours to check for new stars/metrics
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    # Manual trigger from GitHub UI
+    inputs:
+      channel:
+        description: 'Channel to syndicate to'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - devto
+          - gist
+          - metrics
+          - release
+
+jobs:
+  # ===========================================================================
+  # JOB 1: Metrics Check — Logs current stats to a gist
+  # ===========================================================================
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Gather Metrics
+        id: metrics
+        run: |
+          STARS=$(curl -s https://api.github.com/repos/${{ github.repository }} | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['stargazers_count'])")
+          FORKS=$(curl -s https://api.github.com/repos/${{ github.repository }} | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['forks_count'])")
+          echo "stars=$STARS" >> $GITHUB_OUTPUT
+          echo "forks=$FORKS" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # JOB 2: Star Milestone — Creates issues when star thresholds are hit
+  # ===========================================================================
+  milestones:
+    runs-on: ubuntu-latest
+    needs: metrics
+    steps:
+      - name: Check Star Milestones
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STARS=${{ needs.metrics.outputs.stars }}
+          if [ "$STARS" -ge 10 ] && [ "$STARS" -lt 20 ]; then
+            gh issue create --repo ${{ github.repository }} --title "⭐ 10 Stars! — First Milestone" --body "NeuralCline has reached 10 GitHub stars! Thanks to everyone who starred!" --label "milestone" 2>/dev/null || true
+          elif [ "$STARS" -ge 50 ] && [ "$STARS" -lt 100 ]; then
+            gh issue create --repo ${{ github.repository }} --title "⭐ 50 Stars! — Trending Potential" --body "NeuralCline has reached 50 stars! This is the threshold for GitHub Trending. Share the repo!" --label "milestone" 2>/dev/null || true
+          elif [ "$STARS" -ge 100 ] && [ "$STARS" -lt 500 ]; then
+            gh issue create --repo ${{ github.repository }} --title "⭐ 100 Stars! — GitHub Trending" --body "NeuralCline has reached 100 stars! It should now be visible on GitHub Trending. The algorithm is working!" --label "milestone" 2>/dev/null || true
+          elif [ "$STARS" -ge 500 ] && [ "$STARS" -lt 1000 ]; then
+            gh issue create --repo ${{ github.repository }} --title "⭐ 500 Stars! — Viral Growth" --body "NeuralCline has reached 500 stars! This is viral territory. News outlets are likely picking this up." --label "milestone" 2>/dev/null || true
+          elif [ "$STARS" -ge 1000 ]; then
+            gh issue create --repo ${{ github.repository }} --title "⭐ 1000 Stars! — Major Milestone" --body "NeuralCline has reached 1000 stars! This is a major validation. Consider reaching out to press." --label "milestone" 2>/dev/null || true
+          fi
+
+  # ===========================================================================
+  # JOB 3: Update Gist with latest metrics
+  # ===========================================================================
+  gist-update:
+    runs-on: ubuntu-latest
+    needs: metrics
+    steps:
+      - name: Update Metrics Gist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STARS=${{ needs.metrics.outputs.stars }}
+          FORKS=${{ needs.metrics.outputs.forks }}
+          TIMESTAMP=${{ needs.metrics.outputs.timestamp }}
+          
+          CONTENT="# NeuralCline — Live Metrics\n\n| Metric | Value |\n|--------|-------|\n| Stars | $STARS |\n| Forks | $FORKS |\n| Last Updated | $TIMESTAMP |\n\n---\n\n*Auto-updated by NeuralCline Syndication Engine*"
+          
+          # Update the install gist with metrics
+          GIST_ID=$(curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/users/EDGECASE-1/gists | python3 -c "import sys,json; gists=json.load(sys.stdin); [print(g['id']) for g in gists if 'NeuralCline_Install' in str(g)]" 2>/dev/null | head -1)
+          
+          if [ -n "$GIST_ID" ]; then
+            curl -s -X PATCH -H "Authorization: token $GH_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"files\":{\"NeuralCline_Metrics.md\":{\"content\":\"$CONTENT\"}}}" \
+              "https://api.github.com/gists/$GIST_ID" > /dev/null
+          fi
+
+  # ===========================================================================
+  # JOB 4: Dev.to Syndication (manual trigger only)
+  # ===========================================================================
+  devto:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.channel == 'all' || github.event.inputs.channel == 'devto')
+    steps:
+      - name: Post to Dev.to
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+        run: |
+          if [ -z "$DEVTO_API_KEY" ]; then
+            echo "⚠️ No DEVTO_API_KEY set. Skipping Dev.to syndication."
+            exit 0
+          fi
+          
+          ARTICLE='{"article":{"title":"NeuralCline: Session Safety Layer for AI Coding Agents — 99.7% Crash Survival","published":false,"body_markdown":"## NeuralCline\n\nZero-context-loss session recovery for AI coding agents.\n\n**Install:** `curl -fsSL https://raw.githubusercontent.com/EDGECASE-1/NeuralCline/main/install.sh | bash`\n\n**GitHub:** https://github.com/EDGECASE-1/NeuralCline\n\n**Discussion:** https://github.com/EDGECASE-1/NeuralCline/discussions/2","tags":["ai","open-source","devtools","productivity","cli"],"canonical_url":"https://github.com/EDGECASE-1/NeuralCline/discussions/2","description":"Zero-context-loss session recovery for AI coding agents. 99.7% crash survival."}}'
+          
+          curl -X POST https://dev.to/api/articles \
+            -H "api-key: $DEVTO_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$ARTICLE"
