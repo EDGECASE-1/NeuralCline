@@ -70,13 +70,13 @@ NeuralCline provides **four layers of protection** that wrap every Cline session
 ## 🚀 One-Command Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/null-parse/NeuralCline/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/EDGECASE-1/NeuralCline/main/install.sh | bash
 ```
 
 Or with `git clone`:
 
 ```bash
-git clone https://github.com/null-parse/NeuralCline.git /root/NeuralCline
+git clone https://github.com/EDGECASE-1/NeuralCline.git /root/NeuralCline
 bash /root/NeuralCline/install.sh
 ```
 
@@ -337,8 +337,8 @@ We're building a **Glitchware Library** — a catalog of known model glitches, t
 
 ## 🔗 Links
 
-- **Repository:** [github.com/null-parse/NeuralCline](https://github.com/null-parse/NeuralCline)
-- **Install:** `curl -fsSL https://raw.githubusercontent.com/null-parse/NeuralCline/main/install.sh | bash`
+- **Repository:** [github.com/EDGECASE-1/NeuralCline](https://github.com/EDGECASE-1/NeuralCline)
+- **Install:** `curl -fsSL https://raw.githubusercontent.com/EDGECASE-1/NeuralCline/main/install.sh | bash`
 - **Recovery:** `source /root/rehydration.md`
 - **Diagnostic:** `bash /root/NeuralCline/hooks/diagnose.sh`
 - **Project roadmap:** [`docs/TIMELINE.md`](docs/TIMELINE.md)
