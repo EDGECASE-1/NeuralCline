@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuralCline — Blog</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --fg: #e0e0e0;
+            --accent: #00ff88;
+            --accent2: #00ccff;
+            --card: #14141f;
+            --border: #2a2a3a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .post {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            transition: border-color 0.2s;
+        }
+        .post:hover { border-color: var(--accent2); }
+        .post h2 { color: var(--accent2); margin-bottom: 0.5rem; }
+        .post .meta { color: #555; font-size: 0.85rem; margin-bottom: 1rem; }
+        .post p { color: #aaa; font-size: 0.9rem; }
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: #555;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📰 NeuralCline Blog</h1>
+            <p style="color: #888; margin-top: 0.5rem;">Changelog, releases, and technical deep dives</p>
+        </header>
+
+        <div class="post">
+            <h2>🎉 v1.0.1 Launch — Session Safety Layer</h2>
+            <div class="meta">July 10, 2026 · Release</div>
+            <p>NeuralCline is now live on GitHub! Five layers of crash protection, 21-point diagnostic, timing intelligence, and self-learning organism. The core is MIT-licensed and ready for install in 60 seconds.</p>
+            <p style="margin-top: 1rem;"><a href="https://github.com/EDGECASE-1/NeuralCline/releases/tag/v1.0.1" style="color: var(--accent2);">Read full release notes →</a></p>
+        </div>
+
+        <div class="post">
+            <h2>🧠 The Architecture Behind NeuralCline</h2>
+            <div class="meta">July 10, 2026 · Technical Deep Dive</div>
+            <p>How we solved the Cline session crash problem at the architectural level: three compute engines, five safety layers, and automatic shell-level hang detection.</p>
+            <p style="margin-top: 1rem;"><a href="https://github.com/EDGECASE-1/NeuralCline" style="color: var(--accent2);">Read on GitHub →</a></p>
+        </div>
+
+        <div class="post">
+            <h2>📊 Attention Monitor: Live Dashboard</h2>
+            <div class="meta">July 10, 2026 · Infrastructure</div>
+            <p>We're tracking industry attention in real-time — GitHub stars, HN mentions, Reddit posts, Dev.to articles, and more. The live dashboard is public.</p>
+            <p style="margin-top: 1rem;"><a href="https://gist.github.com/EDGECASE-1/455d861eff9b401b69ca93b177c6d112" style="color: var(--accent2);">View Live Dashboard →</a></p>
+        </div>
+
+        <footer>
+            <a href="index.html" style="color: var(--accent2);">← Home</a> · 
+            <a href="pricing.html" style="color: var(--accent2);">Pricing</a> · 
+            <a href="https://github.com/EDGECASE-1/NeuralCline" style="color: var(--accent2);">GitHub</a>
+        </footer>
+    </div>
+</body>
+</html>
