@@ -31,6 +31,7 @@ DEFAULT_SCHEDULE = {
     "hype_dashboard": {"interval": 600, "enabled": True},    # Every 10 min — generates dashboard snapshot
     "social_broadcast": {"interval": 3600, "enabled": True}, # Every 1 hour — generates broadcast
     "swarm_health": {"interval": 300, "enabled": True},      # Every 5 min — runs health check
+    "alert_engine": {"interval": 120, "enabled": True},      # Every 2 min — scans for VIP alerts, emails edgecase@tuta.com
 }
 
 def load_json(path, default=None):
@@ -78,6 +79,8 @@ class HypeOrchestrator:
             return self._internal_social_broadcast()
         if module_name == "swarm_health":
             return self._internal_swarm_health()
+        if module_name == "alert_engine":
+            return self._internal_alert_engine()
         
         if module_name not in module_map:
             return {"error": f"Unknown module: {module_name}"}
@@ -163,6 +166,32 @@ class HypeOrchestrator:
             "inactive_agents": total_agents - active_agents,
             "health_score": round((active_agents / max(total_agents, 1)) * 100, 1)
         }
+
+    def _internal_alert_engine(self):
+        """Run the alert engine — scan for VIPs, send email to edgecase@tuta.com."""
+        try:
+            proc = subprocess.run(
+                ["python3", os.path.join(ENGINE_DIR, "06-alert-engine.py"), "process"],
+                capture_output=True, text=True, timeout=30
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                result = json.loads(proc.stdout)
+                # Get stats too
+                stats_proc = subprocess.run(
+                    ["python3", os.path.join(ENGINE_DIR, "06-alert-engine.py"), "stats"],
+                    capture_output=True, text=True, timeout=15
+                )
+                stats = {}
+                if stats_proc.returncode == 0 and stats_proc.stdout.strip():
+                    stats = json.loads(stats_proc.stdout)
+                return {
+                    "status": "ok",
+                    "alerts_processed": result,
+                    "stats": stats
+                }
+            return {"error": proc.stderr[:200] if proc.stderr else "no output"}
+        except Exception as e:
+            return {"error": str(e)}
 
     def tick_module(self, module_name):
         """Tick a single module on schedule."""
