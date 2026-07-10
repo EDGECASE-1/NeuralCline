@@ -60,7 +60,8 @@ except:
     return 0
 }
 
-# ⏱️ Timing proximity prediction (NEW)
+# ⏱️ Timing proximity prediction + hang buffer routing
+HANG_BUFFER="$NEURAL_DIR/hooks/hang-buffer.sh"
 check_timing_proximity() {
     local command="${1:-}"
     [ -z "$command" ] && return 0
@@ -97,6 +98,20 @@ check_timing_proximity() {
         echo "   $action"
         echo "   Auto-saving checkpoint..."
         timeout 10 python3 "$ENGINE" generate_checkpoint >/dev/null 2>&1
+        # Fork to hang buffer so Cline doesn't lock up
+        if [ -n "$command" ] && [ -x "$HANG_BUFFER" ]; then
+            echo "⏱️  ROUTING TO HANG BUFFER: Forking command to detached subprocess"
+            local buffer_result
+            buffer_result=$(bash "$HANG_BUFFER" exec "$command" 2>&1)
+            local buffer_id=$(echo "$buffer_result" | grep "^BUFFER_ID=" | cut -d= -f2)
+            local bg_pid=$(echo "$buffer_result" | grep "^PID=" | cut -d= -f2)
+            echo "   Buffer ID: $buffer_id (PID: $bg_pid)"
+            echo "   Check: bash $HANG_BUFFER status $buffer_id"
+            echo "   Result: bash $HANG_BUFFER result $buffer_id"
+            # Export for post-tool-state.sh to reference
+            export __NEURAL_BUFFER_ID="$buffer_id"
+            export __NEURAL_BUFFER_PID="$bg_pid"
+        fi
     elif [ "$timeout_prox" -ge 40 ] 2>/dev/null; then
         echo "⏱️  TIMING INFO: Timeout proximity is $timeout_prox/100"
         echo "   $action"
