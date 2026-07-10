@@ -1,0 +1,23 @@
+{
+  "name": "NeuralCline — Infinite Persistence Workspace",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/python:1": {}
+  },
+  "postCreateCommand": "bash /root/NeuralCline/install.sh",
+  "postStartCommand": "source /root/NeuralCline/rehydration.md",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.vscode-github-actions",
+        "ms-python.python",
+        "ms-vscode.makefile-tools"
+      ]
+    }
+  },
+  "forwardPorts": [8000],
+  "remoteUser": "root",
+  "workspaceFolder": "/root/NeuralCline",
+  "workspaceMount": "source=${localWorkspaceFolder}/NeuralCline,target=/root/NeuralCline,type=bind"
+}
