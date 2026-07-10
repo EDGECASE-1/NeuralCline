@@ -1,0 +1,23 @@
+{
+  "total_clones": 0,
+  "total_installs": 0,
+  "daily": {
+    "2026-07-10": {
+      "clones": 0,
+      "installs": 0
+    }
+  },
+  "hourly": {},
+  "last_24h": 0,
+  "last_7d": 0,
+  "source_breakdown": {},
+  "peaks": {
+    "max_daily": 0,
+    "date": null
+  },
+  "events": [],
+  "unique_clones": 0,
+  "total_views": 0,
+  "unique_visitors": 0,
+  "last_checked": "2026-07-10T04:49:41.950938+00:00"
+}

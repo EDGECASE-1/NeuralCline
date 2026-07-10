@@ -1,0 +1,21 @@
+{
+  "profiles": {
+    "EDGECASE-1": {
+      "username": "EDGECASE-1",
+      "first_seen": "2026-07-10T04:49:38.624671+00:00",
+      "interactions": 5,
+      "sources": [
+        "github-issue"
+      ],
+      "intents": [
+        "troubleshooting",
+        "agent-autonomy",
+        "installation"
+      ],
+      "is_agent": false,
+      "engagement_score": 75,
+      "last_seen": "2026-07-10T04:49:38.624935+00:00"
+    }
+  },
+  "total": 1
+}

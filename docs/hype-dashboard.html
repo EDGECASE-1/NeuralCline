@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧠 NeuralCline — Hype Engine Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --card: #131a2b;
+    --border: #1e2a45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: 0 0 20px rgba(0,212,255,0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 30px;
+  }
+  .header h1 {
+    font-size: 24px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header-right { display: flex; gap: 15px; align-items: center; }
+  .status-badge {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .status-running { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .status-idle { background: rgba(234,179,8,0.15); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+  .status-error { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .last-updated { font-size: 12px; color: var(--muted); }
+
+  /* Grid Layout */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  @media (max-width: 1024px) { .grid-4 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 768px) { .grid, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+  /* Cards */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; box-shadow: var(--glow);
+  }
+  .card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 15px; font-size: 13px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; font-weight: 600;
+  }
+  .card-title { font-size: 14px; }
+  .card-value {
+    font-size: 36px; font-weight: 700; line-height: 1.1;
+  }
+  .card-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Metric colors */
+  .metric-accent { color: var(--accent); }
+  .metric-green { color: var(--green); }
+  .metric-yellow { color: var(--yellow); }
+  .metric-red { color: var(--red); }
+  .metric-purple { color: var(--accent2); }
+
+  /* Agent list */
+  .agent-list { max-height: 300px; overflow-y: auto; }
+  .agent-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .agent-item:last-child { border-bottom: none; }
+  .agent-name { font-size: 13px; color: var(--accent); }
+  .agent-role { font-size: 11px; color: var(--muted); }
+  .agent-status { font-size: 11px; }
+  .agent-active { color: var(--green); }
+  .agent-idle { color: var(--yellow); }
+
+  /* Inquiries */
+  .inquiry-list { max-height: 250px; overflow-y: auto; }
+  .inquiry-item {
+    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 12px;
+  }
+  .inquiry-type { color: var(--accent2); font-weight: 600; }
+  .inquiry-intent { color: var(--muted); }
+  .inquiry-author { color: var(--accent); }
+
+  /* Progress bars */
+  .progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 8px; }
+  .progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.5s; }
+
+  /* Source breakdown */
+  .source-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .source-name { color: var(--muted); }
+  .source-count { color: var(--text); font-weight: 600; }
+
+  /* Activity log */
+  .activity-log { max-height: 200px; overflow-y: auto; font-size: 12px; }
+  .activity-item { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .activity-time { color: var(--muted); margin-right: 8px; }
+  .activity-module { color: var(--accent2); font-weight: 600; }
+  .activity-ok { color: var(--green); }
+  .activity-error { color: var(--red); }
+
+  /* Control bar */
+  .control-bar {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    padding: 15px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 20px; align-items: center;
+  }
+  .control-btn {
+    padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px;
+    background: transparent; color: var(--text); cursor: pointer;
+    font-size: 13px; transition: all 0.2s;
+  }
+  .control-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .control-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .control-btn.primary:hover { opacity: 0.9; }
+  .control-btn.danger { border-color: var(--red); color: var(--red); }
+  .control-btn.danger:hover { background: rgba(239,68,68,0.1); }
+
+  /* Refresh pulse */
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .refreshing { animation: pulse 1s infinite; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🧠 NeuralCline Hype Engine</h1>
+    <div class="header-right">
+      <span class="status-badge status-running" id="statusBadge">Running</span>
+      <span class="last-updated" id="lastUpdated">Updating...</span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="control-bar">
+    <button class="control-btn primary" onclick="manualTick()">⏱ Tick Now</button>
+    <button class="control-btn" onclick="fetchStatus()">🔄 Refresh</button>
+    <button class="control-btn" onclick="toggleAutoRefresh()">⏸ Auto</button>
+    <span style="color: var(--muted); font-size: 12px; margin-left: auto;" id="tickCount">Cycle #0</span>
+  </div>
+
+  <!-- Top Metrics -->
+  <div class="grid grid-4">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📥 Total Installs</span></div>
+      <div class="card-value metric-accent" id="totalInstalls">--</div>
+      <div class="card-label">Lifetime clones & installs</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">🧠 Swarm Size</span></div>
+      <div class="card-value metric-purple" id="swarmSize">--</div>
+      <div class="card-label">Connected AI agents</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">💬 Inquiries</span></div>
+      <div class="card-value metric-green" id="totalInquiries">--</div>
+      <div class="card-label">Questions answered</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">📊 EEF</span></div>
+      <div class="card-value" id="eefValue" style="color: var(--green);">--</div>
+      <div class="card-label">Execution Emulation Factor</div>
+    </div>
+  </div>
+
+  <!-- Second Row -->
+  <div class="grid grid-3">
+    <!-- Visitor Breakdown -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">👥 Visitor Breakdown</span></div>
+      <div class="card-grid">
+        <div>
+          <div class="card-value metric-green" id="humanVisitors" style="font-size: 28px;">--</div>
+          <div class="card-label">👤 Humans</div>
+        </div>
+        <div>
+          <div class="card-value metric-purple" id="agentVisitors" style="font-size: 28px;">--</div>
+          <div class="card-label">🤖 Agents</div>
+        </div>
+      </div>
+      <div class="progress-bar" style="margin-top: 15px;">
+        <div class="progress-fill" id="agentRatioBar" style="width: 0%;"></div>
+      </div>
+      <div class="card-label" style="margin-top: 4px; text-align: right;" id="agentRatioLabel">0% agent ratio</div>
+    </div>
+
+    <!-- Download Velocity -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">📈 Download Velocity</span></div>
+      <div class="card-grid">
+        <div>
+          <div class="card-value metric-accent" id="last24h" style="font-size: 28px;">--</div>
+          <div class="card-label">Last 24 hours</div>
+        </div>
+        <div>
+          <div class="card-value" id="last7d" style="font-size: 28px; color: var(--yellow);">--</div>
+          <div class="card-label">Last 7 days</div>
+        </div>
+      </div>
+      <div class="card-label" style="margin-top: 10px;">
+        Velocity: <span id="velocityPerHour" style="color: var(--accent);">--</span> /hour
+      </div>
+    </div>
+
+    <!-- Swarm Roles -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">🐝 Swarm Roles</span></div>
+      <div id="swarmRoles">
+        <div class="source-item"><span class="source-name">Builders</span><span class="source-count" id="roleBuilders">--</span></div>
+        <div class="source-item"><span class="source-name">Analysts</span><span class="source-count" id="roleAnalysts">--</span></div>
+        <div class="source-item"><span class="source-name">Communicators</span><span class="source-count" id="roleCommunicators">--</span></div>
+        <div class="source-item"><span class="source-name">Operators</span><span class="source-count" id="roleOperators">--</span></div>
+        <div class="source-item"><span class="source-name">Explorers</span><span class="source-count" id="roleExplorers">--</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Third Row -->
+  <div class="grid">
+    <!-- Connected Agents List -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">🤖 Connected Agents</span></div>
+      <div class="agent-list" id="agentList">
+        <div style="color: var(--muted); font-size: 13px;">No agents connected yet</div>
+      </div>
+    </div>
+
+    <!-- Recent Inquiries -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">💬 Recent Inquiries</span></div>
+      <div class="inquiry-list" id="inquiryList">
+        <div style="color: var(--muted); font-size: 13px;">No inquiries yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fourth Row -->
+  <div class="grid">
+    <!-- Traffic Sources -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">🌐 Traffic Sources</span></div>
+      <div id="sourceBreakdown">
+        <div class="source-item"><span class="source-name">Direct</span><span class="source-count" id="sourceDirect">--</span></div>
+        <div class="source-item"><span class="source-name">GitHub</span><span class="source-count" id="sourceGitHub">--</span></div>
+        <div class="source-item"><span class="source-name">Search</span><span class="source-count" id="sourceSearch">--</span></div>
+        <div class="source-item"><span class="source-name">Social</span><span class="source-count" id="sourceSocial">--</span></div>
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">📋 Engine Activity</span></div>
+      <div class="activity-log" id="activityLog">
+        <div style="color: var(--muted); font-size: 13px;">Waiting for activity...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let autoRefresh = true;
+let refreshInterval = null;
+
+function fetchStatus() {
+  document.getElementById('lastUpdated').textContent = 'Refreshing...';
+  document.getElementById('lastUpdated').classList.add('refreshing');
+
+  fetch('/root/NeuralCline/hype-engine/hype-state.json')
+    .then(r => r.json())
+    .catch(() => ({}))
+    .then(state => {
+      // Also try to fetch individual module stats
+      return Promise.all([
+        Promise.resolve(state),
+        fetch('/root/NeuralCline/hype-engine/inquiry-log.json').then(r => r.json()).catch(() => ({})),
+        fetch('/root/NeuralCline/hype-engine/agent-connections.json').then(r => r.json()).catch(() => ({})),
+        fetch('/root/NeuralCline/hype-engine/download-log.json').then(r => r.json()).catch(() => ({}))
+      ]);
+    })
+    .then(([state, inquiries, agents, downloads]) => {
+      updateDashboard(state, inquiries, agents, downloads);
+    })
+    .catch(err => {
+      // Fallback to mock data if files can't be fetched via HTTP
+      console.log('Direct file fetch failed, trying API fallback', err);
+      // Try to get from the orchestrator API
+      fetch('/api/status')
+        .then(r => r.json())
+        .then(data => updateDashboardFromAPI(data))
+        .catch(() => {
+          document.getElementById('lastUpdated').textContent = 'Offline - need local server';
+          document.getElementById('lastUpdated').classList.remove('refreshing');
+        });
+    });
+}
+
+function updateDashboard(state, inquiries, agents, downloads) {
+  // Inquiries data
+  const inquiryStats = state?.last_ticks?.inquiry_engine?.result || {};
+  document.getElementById('totalInquiries').textContent = inquiryStats.total_inquiries ?? downloads?.total_clones ?? '--';
+  document.getElementById('humanVisitors').textContent = inquiryStats.human_visitors ?? '--';
+  document.getElementById('agentVisitors').textContent = inquiryStats.agent_visitors ?? '--';
+  
+  const total = (inquiryStats.human_visitors || 0) + (inquiryStats.agent_visitors || 0);
+  const agentRatio = total > 0 ? ((inquiryStats.agent_visitors || 0) / total * 100) : 0;
+  document.getElementById('agentRatioBar').style.width = agentRatio + '%';
+  document.getElementById('agentRatioLabel').textContent = agentRatio.toFixed(1) + '% agent ratio';
+
+  // Agent data
+  const agentStats = state?.last_ticks?.agent_mcp_server?.result || {};
+  document.getElementById('swarmSize').textContent = agentStats.total_agents ?? agents?.total_connections ?? '--';
+  
+  const roles = agentStats.roles || {};
+  document.getElementById('roleBuilders').textContent = roles.builder || 0;
+  document.getElementById('roleAnalysts').textContent = roles.analyst || 0;
+  document.getElementById('roleCommunicators').textContent = roles.communicator || 0;
+  document.getElementById('roleOperators').textContent = roles.operator || 0;
+  document.getElementById('roleExplorers').textContent = roles.explorer || 0;
+
+  // EEF
+  const eef = agentStats.eef || '0.3';
+  document.getElementById('eefValue').textContent = eef;
+  const eefNum = parseFloat(eef);
+  if (eefNum < 1.2) document.getElementById('eefValue').style.color = 'var(--green)';
+  else if (eefNum < 1.8) document.getElementById('eefValue').style.color = 'var(--yellow)';
+  else if (eefNum < 2.5) document.getElementById('eefValue').style.color = 'orange';
+  else document.getElementById('eefValue').style.color = 'var(--red)';
+
+  // Download data
+  const downloadStats = state?.last_ticks?.download_tracker?.result || {};
+  document.getElementById('totalInstalls').textContent = downloadStats.total_clones ?? downloads?.total_clones ?? '--';
+  document.getElementById('last24h').textContent = downloadStats.last_24h ?? '--';
+  document.getElementById('last7d').textContent = downloadStats.last_7d ?? '--';
+  
+  const velocity = downloadStats.install_velocity || {};
+  document.getElementById('velocityPerHour').textContent = velocity.velocity_per_hour ?? '--';
+
+  // Sources
+  const sources = downloadStats.downloader_insights?.top_sources || {};
+  document.getElementById('sourceDirect').textContent = sources['direct']?.count ?? sources.direct ?? '--';
+  document.getElementById('sourceGitHub').textContent = sources['github.com']?.count ?? sources.github ?? '--';
+  document.getElementById('sourceSearch').textContent = sources['google.com']?.count ?? sources.search ?? '--';
+  document.getElementById('sourceSocial').textContent = sources['reddit.com']?.count ?? sources.social ?? '--';
+
+  // Cycle count
+  document.getElementById('tickCount').textContent = 'Cycle #' + (state?.cycle_count || 0);
+
+  // Agents list
+  const agentList = document.getElementById('agentList');
+  const agentEntries = agents?.agents || {};
+  const agentKeys = Object.keys(agentEntries).slice(0, 10);
+  if (agentKeys.length > 0) {
+    agentList.innerHTML = agentKeys.map(id => {
+      const a = agentEntries[id];
+      const statusClass = a?.status === 'active' ? 'agent-active' : 'agent-idle';
+      return `<div class="agent-item">
+        <div><div class="agent-name">${id}</div><div class="agent-role">${a?.swarm_role || 'explorer'}</div></div>
+        <div class="agent-status ${statusClass}">${a?.status || 'unknown'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Inquiries list
+  const inquiryList = document.getElementById('inquiryList');
+  const inquiryEntries = inquiries?.inquiries || [];
+  if (inquiryEntries.length > 0) {
+    inquiryList.innerHTML = inquiryEntries.slice(-5).reverse().map(i => {
+      return `<div class="inquiry-item">
+        <span class="inquiry-author">${i.author || 'unknown'}</span> asked about
+        <span class="inquiry-intent">${(i.intent || ['general']).join(', ')}</span>
+        ${i.responded ? '<span style="color: var(--green);">✓</span>' : '<span style="color: var(--yellow);">⏳</span>'}
+      </div>`;
+    }).join('');
+  }
+
+  // Activity log
+  const activityLog = document.getElementById('activityLog');
+  const ticks = state?.last_ticks || {};
+  const tickKeys = Object.keys(ticks);
+  if (tickKeys.length > 0) {
+    activityLog.innerHTML = tickKeys.slice(-5).reverse().map(k => {
+      const t = ticks[k];
+      return `<div class="activity-item">
+        <span class="activity-time">${t?.timestamp ? new Date(t.timestamp).toLocaleTimeString() : '--'}</span>
+        <span class="activity-module">${k}</span>
+        <span class="${t?.status === 'ok' ? 'activity-ok' : 'activity-error'}">${t?.status || 'unknown'}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Status
+  const statusBadge = document.getElementById('statusBadge');
+  const status = state?.status || 'idle';
+  statusBadge.textContent = status;
+  statusBadge.className = 'status-badge ' + (status === 'running' ? 'status-running' : status === 'error' ? 'status-error' : 'status-idle');
+
+  // Timestamp
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+  document.getElementById('lastUpdated').classList.remove('refreshing');
+}
+
+function updateDashboardFromAPI(data) {
+  // Minimal API fallback
+  document.getElementById('totalInquiries').textContent = data?.inquiry_status?.total_inquiries || '--';
+  document.getElementById('swarmSize').textContent = data?.agent_status?.total_agents || '--';
+  document.getElementById('totalInstalls').textContent = data?.download_status?.total_downloaders || '--';
+  document.getElementById('eefValue').textContent = data?.agent_status?.eef || '0.3';
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+  document.getElementById('lastUpdated').classList.remove('refreshing');
+}
+
+function manualTick() {
+  document.getElementById('lastUpdated').textContent = 'Ticking...';
+  fetch('/api/tick', { method: 'POST' })
+    .then(() => setTimeout(fetchStatus, 2000))
+    .catch(() => {
+      // Fallback: just refresh
+      setTimeout(fetchStatus, 1000);
+    });
+}
+
+function toggleAutoRefresh() {
+  autoRefresh = !autoRefresh;
+  if (autoRefresh) {
+    refreshInterval = setInterval(fetchStatus, 10000);
+    document.querySelector('.control-btn:nth-child(3)').textContent = '⏸ Auto';
+  } else {
+    clearInterval(refreshInterval);
+    document.querySelector('.control-btn:nth-child(3)').textContent = '▶ Auto';
+  }
+}
+
+// Initial load and auto-refresh
+fetchStatus();
+refreshInterval = setInterval(fetchStatus, 10000);
+</script>
+</body>
+</html>

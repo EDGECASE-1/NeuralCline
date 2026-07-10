@@ -1,0 +1,73 @@
+{
+  "inquiries": [
+    {
+      "id": "issue-10",
+      "type": "issue",
+      "number": 10,
+      "title": "NeuralCline is trending \u2014 share your experience",
+      "author": "EDGECASE-1",
+      "intent": [
+        "installation",
+        "agent-autonomy",
+        "troubleshooting"
+      ],
+      "timestamp": "2026-07-10T04:49:38.624646+00:00",
+      "responded": true
+    },
+    {
+      "id": "issue-9",
+      "type": "issue",
+      "number": 9,
+      "title": "\ud83d\udcca Launch Metrics Dashboard \u2014 Real-time Tracking",
+      "author": "EDGECASE-1",
+      "intent": [
+        "installation",
+        "troubleshooting"
+      ],
+      "timestamp": "2026-07-10T04:49:38.624832+00:00",
+      "responded": true
+    },
+    {
+      "id": "issue-8",
+      "type": "issue",
+      "number": 8,
+      "title": "\ud83d\udccb Product Hunt Launch Content \u2014 Next Day",
+      "author": "EDGECASE-1",
+      "intent": [
+        "installation",
+        "agent-autonomy"
+      ],
+      "timestamp": "2026-07-10T04:49:38.624865+00:00",
+      "responded": true
+    },
+    {
+      "id": "issue-7",
+      "type": "issue",
+      "number": 7,
+      "title": "\ud83d\udccb Hacker News Launch Content \u2014 Show HN",
+      "author": "EDGECASE-1",
+      "intent": [
+        "installation",
+        "agent-autonomy",
+        "troubleshooting"
+      ],
+      "timestamp": "2026-07-10T04:49:38.624890+00:00",
+      "responded": true
+    },
+    {
+      "id": "issue-6",
+      "type": "issue",
+      "number": 6,
+      "title": "\ud83d\udccb Reddit Launch Content \u2014 Ready to Copy & Paste",
+      "author": "EDGECASE-1",
+      "intent": [
+        "installation",
+        "agent-autonomy",
+        "troubleshooting"
+      ],
+      "timestamp": "2026-07-10T04:49:38.624930+00:00",
+      "responded": true
+    }
+  ],
+  "total": 5
+}

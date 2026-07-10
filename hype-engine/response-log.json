@@ -1,0 +1,30 @@
+{
+  "responses": [
+    {
+      "type": "issue",
+      "target": 10,
+      "timestamp": "2026-07-10T04:49:39.564212+00:00"
+    },
+    {
+      "type": "issue",
+      "target": 9,
+      "timestamp": "2026-07-10T04:49:40.181411+00:00"
+    },
+    {
+      "type": "issue",
+      "target": 8,
+      "timestamp": "2026-07-10T04:49:40.700478+00:00"
+    },
+    {
+      "type": "issue",
+      "target": 7,
+      "timestamp": "2026-07-10T04:49:41.297816+00:00"
+    },
+    {
+      "type": "issue",
+      "target": 6,
+      "timestamp": "2026-07-10T04:49:41.813496+00:00"
+    }
+  ],
+  "total": 5
+}
