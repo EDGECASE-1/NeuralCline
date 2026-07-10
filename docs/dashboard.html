@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuralCline — Real-Time Dashboard</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --fg: #e0e0e0;
+            --accent: #00ff88;
+            --accent2: #00ccff;
+            --card: #14141f;
+            --border: #2a2a3a;
+            --gold: #ffd700;
+            --red: #ff4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 1rem; }
+        h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            padding: 1rem 0;
+        }
+        .last-updated { text-align: center; color: #555; font-size: 0.8rem; margin-bottom: 1rem; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .card .value { font-size: 1.8rem; font-weight: bold; }
+        .card .label { font-size: 0.8rem; color: #888; margin-top: 0.3rem; }
+        .card .sub { font-size: 0.7rem; color: #555; }
+        .accent { color: var(--accent); }
+        .accent2 { color: var(--accent2); }
+        .gold { color: var(--gold); }
+        .red { color: var(--red); }
+        .section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .section h2 { font-size: 1.1rem; color: var(--accent2); margin-bottom: 0.8rem; }
+        .section h3 { font-size: 0.9rem; color: var(--accent); margin: 0.5rem 0; }
+        .milestone {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+        .milestone.achieved { color: var(--accent); }
+        .ms-icon { flex-shrink: 0; }
+        .ms-label { flex-grow: 1; }
+        .ms-bar {
+            width: 100px;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .ms-fill {
+            height: 100%;
+            background: var(--accent2);
+            border-radius: 3px;
+            transition: width 1s;
+        }
+        .ms-pct { width: 40px; text-align: right; font-size: 0.75rem; color: #888; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; padding: 0.4rem; color: #888; border-bottom: 1px solid var(--border); }
+        td { padding: 0.4rem; border-bottom: 1px solid var(--border); }
+        .bar-container { width: 100%; height: 20px; background: var(--border); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 4px; transition: width 1s; }
+        .roi-big { font-size: 2.5rem; font-weight: bold; color: var(--gold); }
+        footer { text-align: center; padding: 1rem 0; color: #555; font-size: 0.7rem; }
+        .auto-refresh { color: #555; font-size: 0.7rem; text-align: center; }
+    </style>
+    <meta http-equiv="refresh" content="60">
+</head>
+<body>
+    <div class="container">
+        <h1>📊 NeuralCline Real-Time Dashboard</h1>
+        <div class="last-updated">Last updated: 2026-07-10T04:21:53 UTC · Auto-refreshes every 60s</div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="value accent">0</div>
+                <div class="label">★ Stars</div>
+                <div class="sub">0.0% to next milestone</div>
+            </div>
+            <div class="card">
+                <div class="value accent2">140</div>
+                <div class="label">📦 Installs</div>
+                <div class="sub">4200 min recovered</div>
+            </div>
+            <div class="card">
+                <div class="value gold">$5257.00</div>
+                <div class="label">💰 Economic Value</div>
+                <div class="sub">70.0 hrs @ $75/hr</div>
+            </div>
+            <div class="card">
+                <div class="value" style="color: var(--red)">
+                    0%
+                </div>
+                <div class="label">📈 Performance vs Projection</div>
+                <div class="sub">Tracking SEEDLING</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="value">0</div>
+                <div class="label">⑂ Forks</div>
+            </div>
+            <div class="card">
+                <div class="value">0</div>
+                <div class="label">👁 Watchers</div>
+            </div>
+            <div class="card">
+                <div class="value">1</div>
+                <div class="label">🔍 Search Results</div>
+            </div>
+            <div class="card">
+                <div class="value">1</div>
+                <div class="label">📰 HN Mentions</div>
+            </div>
+            <div class="card">
+                <div class="value">0</div>
+                <div class="label">🔴 Reddit Posts</div>
+            </div>
+            <div class="card">
+                <div class="value">0</div>
+                <div class="label">💬 Discussion</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Projection Comparison</h2>
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Actual</th>
+                    <th>Conservative Target</th>
+                    <th>Aggressive Target</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td>Stars</td>
+                    <td><strong>0</strong></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>📊</td>
+                </tr>
+                <tr>
+                    <td>Installs</td>
+                    <td><strong>140</strong></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>🔥</td>
+                </tr>
+                <tr>
+                    <td>Est. Users</td>
+                    <td><strong>—</strong></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>Est. Revenue</td>
+                    <td><strong>—</strong></td>
+                    <td>$0.00</td>
+                    <td>$0.00</td>
+                    <td>—</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Milestone Tracker</h2>
+            
+            <div class="milestone">
+                <span class="ms-icon">⏳</span>
+                <span class="ms-label">10 stars — ⭐ First milestone — social proof begins</span>
+                <div class="ms-bar"><div class="ms-fill" style="width:0.0%"></div></div>
+                <span class="ms-pct">0.0%</span>
+            </div>
+            <div class="milestone">
+                <span class="ms-icon">⏳</span>
+                <span class="ms-label">50 stars — ⭐ Growth threshold — organic sharing starts</span>
+                <div class="ms-bar"><div class="ms-fill" style="width:0.0%"></div></div>
+                <span class="ms-pct">0.0%</span>
+            </div>
+            <div class="milestone">
+                <span class="ms-icon">⏳</span>
+                <span class="ms-label">100 stars — 🔥 GitHub Trending eligible — algorithm kicks in</span>
+                <div class="ms-bar"><div class="ms-fill" style="width:0.0%"></div></div>
+                <span class="ms-pct">0.0%</span>
+            </div>
+            <div class="milestone">
+                <span class="ms-icon">⏳</span>
+                <span class="ms-label">500 stars — 🚀 Viral threshold — auto-posted to HN/Reddit/Twitter</span>
+                <div class="ms-bar"><div class="ms-fill" style="width:0.0%"></div></div>
+                <span class="ms-pct">0.0%</span>
+            </div>
+            <div class="milestone">
+                <span class="ms-icon">⏳</span>
+                <span class="ms-label">1000 stars — 📰 News threshold — TechCrunch/VentureBeat cover</span>
+                <div class="ms-bar"><div class="ms-fill" style="width:0.0%"></div></div>
+                <span class="ms-pct">0.0%</span>
+            </div>
+            <div class="milestone">
+                <span class="ms-icon">⏳</span>
+                <span class="ms-label">5000 stars — 🏢 Agency threshold — actively evaluated by AMD/NVIDIA/OpenAI</span>
+                <div class="ms-bar"><div class="ms-fill" style="width:0.0%"></div></div>
+                <span class="ms-pct">0.0%</span>
+            </div>
+            <div class="milestone">
+                <span class="ms-icon">⏳</span>
+                <span class="ms-label">10000 stars — 🌍 Industry standard — enterprise adoption begins</span>
+                <div class="ms-bar"><div class="ms-fill" style="width:0.0%"></div></div>
+                <span class="ms-pct">0.0%</span>
+            </div>
+            <div class="milestone">
+                <span class="ms-icon">⏳</span>
+                <span class="ms-label">50000 stars — 💎 Market leader — acquisition offers likely</span>
+                <div class="ms-bar"><div class="ms-fill" style="width:0.0%"></div></div>
+                <span class="ms-pct">0.0%</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💰 Real-Time ROI</h2>
+            <div class="roi-big">$5257.00</div>
+            <p style="color: #888; font-size: 0.85rem;">Total economic value generated by NeuralCline</p>
+            <table>
+                <tr><td>Minutes of developer time recovered</td><td><strong>4200</strong></td></tr>
+                <tr><td>Hours of developer time recovered</td><td><strong>70.0</strong></td></tr>
+                <tr><td>Dollar value of time recovered</td><td><strong>$5250.00</strong></td></tr>
+                <tr><td>API cost savings</td><td><strong>$7.00</strong></td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>📈 Performance Velocity</h2>
+            <p style="color: #888; font-size: 0.85rem;">
+                Elapsed: 0.0 hours (0.0 days) · 
+                1 data points · 
+                Tracking: SEEDLING
+            </p>
+            <table>
+                <tr><th>Time</th><th>Stars</th><th>Installs</th><th>ROI</th></tr>
+                <tr><td>2026-07-10T04:21:53</td><td>0</td><td>140</td><td>$5257.00</td></tr>
+            </table>
+        </div>
+
+        <footer>
+            NeuralCline — the boundary no system anticipates.<br>
+            <a href="https://github.com/EDGECASE-1/NeuralCline" style="color: var(--accent2);">GitHub</a> · 
+            <a href="index.html" style="color: var(--accent2);">Home</a> · 
+            <a href="pricing.html" style="color: var(--accent2);">Pricing</a>
+        </footer>
+    </div>
+</body>
+</html>
