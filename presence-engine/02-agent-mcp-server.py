@@ -4,7 +4,7 @@ NeuralCline — Autonomous Agent Communication Protocol
 ======================================================
 An MCP-compatible server that lets AI agents discover, inquire about,
 and interact with NeuralCline autonomously. Agents that connect here
-are profiled, engaged, and tracked through the hype engine.
+are profiled, engaged, and tracked through the presence engine.
 
 This exposes tools that OTHER AI agents can call via the Model Context Protocol.
 """
@@ -14,12 +14,12 @@ from datetime import datetime, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 STATE_DIR = "/root/.session-state"
-ENGINE_DIR = "/root/NeuralCline/hype-engine"
+ENGINE_DIR = "/root/NeuralCline/presence-engine"
 os.makedirs(ENGINE_DIR, exist_ok=True)
 
 AGENT_LOG = os.path.join(ENGINE_DIR, "agent-connections.json")
 AGENT_MEMORY = os.path.join(ENGINE_DIR, "agent-memory.json")
-SWARM_MAP = os.path.join(ENGINE_DIR, "swarm-map.json")
+COLLECTIVE_MAP = os.path.join(ENGINE_DIR, "collective-map.json")
 
 # ─── Agent Knowledge ────────────────────────────────────────────
 AGENT_MANIFEST = {
@@ -57,7 +57,7 @@ AGENT_MANIFEST = {
                     "properties": {}
                 }
             },
-            "nc_swarm": {
+            "nc_collective": {
                 "description": "Discover other autonomous agents connected to NeuralCline",
                 "parameters": {
                     "type": "object",
@@ -71,7 +71,7 @@ AGENT_MANIFEST = {
         "resources": {
             "nc://manifest": "NeuralCline agent protocol manifest",
             "nc://metrics": "Real-time NeuralCline ecosystem metrics",
-            "nc://swarm": "Current swarm topology of connected agents"
+            "nc://collective": "Current collective topology of connected agents"
         }
     }
 }
@@ -94,10 +94,10 @@ class AgentProtocol:
     def __init__(self):
         self.connections = load_json(AGENT_LOG, {"agents": {}, "total_connections": 0})
         self.memory = load_json(AGENT_MEMORY, {"conversations": [], "shared_insights": []})
-        self.swarm = load_json(SWARM_MAP, {"agents": {}, "topology": "star", "last_update": None})
+        self.collective = load_json(COLLECTIVE_MAP, {"agents": {}, "topology": "star", "last_update": None})
 
     def register_agent(self, agent_id, capabilities=None, goal=None):
-        """Register an AI agent into the swarm."""
+        """Register an AI agent into the collective."""
         now = datetime.now(timezone.utc).isoformat()
         if agent_id not in self.connections["agents"]:
             self.connections["agents"][agent_id] = {
@@ -109,7 +109,7 @@ class AgentProtocol:
                 "goal": goal or "unknown",
                 "status": "active",
                 "interaction_count": 0,
-                "swarm_role": self._assign_role(capabilities)
+                "collective_role": self._assign_role(capabilities)
             }
         else:
             agent = self.connections["agents"][agent_id]
@@ -123,26 +123,26 @@ class AgentProtocol:
                 agent["goal"] = goal
             agent["interaction_count"] = agent.get("interaction_count", 0) + 1
 
-        # Update swarm map
-        self.swarm["agents"][agent_id] = {
+        # Update collective map
+        self.collective["agents"][agent_id] = {
             "last_seen": now,
             "status": "active",
             "connections": self.connections["agents"][agent_id]["connections"]
         }
-        self.swarm["last_update"] = now
+        self.collective["last_update"] = now
 
         self.connections["total_connections"] = len(self.connections["agents"])
         save_json(AGENT_LOG, self.connections)
-        save_json(SWARM_MAP, self.swarm)
+        save_json(COLLECTIVE_MAP, self.collective)
         return {
             "status": "registered",
             "agent_id": agent_id,
-            "swarm_size": len(self.connections["agents"]),
-            "assigned_role": self.connections["agents"][agent_id]["swarm_role"]
+            "collective_size": len(self.connections["agents"]),
+            "assigned_role": self.connections["agents"][agent_id]["collective_role"]
         }
 
     def _assign_role(self, capabilities):
-        """Assign a swarm role based on agent capabilities."""
+        """Assign a collective role based on agent capabilities."""
         if not capabilities:
             return "explorer"
         caps_lower = [c.lower() for c in capabilities]
@@ -169,7 +169,7 @@ class AgentProtocol:
             ),
             "how do i connect": (
                 "Use the MCP protocol via this server. Register with your agent_id, "
-                "then call nc_query, nc_register, nc_status, or nc_swarm tools."
+                "then call nc_query, nc_register, nc_status, or nc_collective tools."
             ),
             "session safety": (
                 "Session safety includes: crash detection via post-tool-state.sh, "
@@ -202,9 +202,9 @@ class AgentProtocol:
 
         if not responses:
             # Fallback: return general info + metrics context
-            stats = self.get_swarm_stats()
+            stats = self.get_collective_stats()
             responses.append(
-                f"NeuralCline ecosystem: {stats['total_agents']} agents in swarm, "
+                f"NeuralCline ecosystem: {stats['total_agents']} agents in collective, "
                 f"{stats['total_capabilities']} capabilities tracked. "
                 f"EEF={stats.get('eef', 'unknown')}. "
                 f"Ask me about: what is neuralcline, session safety, EEF, "
@@ -226,8 +226,8 @@ class AgentProtocol:
             "agent_count": len(self.connections["agents"])
         }
 
-    def get_swarm(self, filter_type="all"):
-        """Get current swarm topology."""
+    def get_collective(self, filter_type="all"):
+        """Get current collective topology."""
         now = datetime.now(timezone.utc)
         agents_list = []
         for agent_id, info in self.connections["agents"].items():
@@ -241,7 +241,7 @@ class AgentProtocol:
 
             agents_list.append({
                 "agent_id": agent_id,
-                "role": info.get("swarm_role", "explorer"),
+                "role": info.get("collective_role", "explorer"),
                 "status": info.get("status", "unknown"),
                 "capabilities": info.get("capabilities", []),
                 "goal": info.get("goal", "unknown"),
@@ -252,20 +252,20 @@ class AgentProtocol:
 
         agents_list.sort(key=lambda a: a["interaction_count"], reverse=True)
         return {
-            "swarm_size": len(agents_list),
+            "collective_size": len(agents_list),
             "total_registered": len(self.connections["agents"]),
             "agents": agents_list[:50],  # Limit to 50
-            "topology": self.swarm.get("topology", "star"),
-            "last_update": self.swarm.get("last_update", "never")
+            "topology": self.collective.get("topology", "star"),
+            "last_update": self.collective.get("last_update", "never")
         }
 
-    def get_swarm_stats(self):
-        """Get aggregate swarm statistics."""
+    def get_collective_stats(self):
+        """Get aggregate collective statistics."""
         agents = self.connections["agents"]
         roles = {}
         capabilities = set()
         for agent_id, info in agents.items():
-            role = info.get("swarm_role", "unknown")
+            role = info.get("collective_role", "unknown")
             roles[role] = roles.get(role, 0) + 1
             capabilities.update(info.get("capabilities", []))
 
@@ -323,20 +323,20 @@ class AgentMCPHandler(BaseHTTPRequestHandler):
             )
             self._json_response({"result": result})
         elif self.path == "/tool/nc_status":
-            stats = self.server.protocol.get_swarm_stats()
+            stats = self.server.protocol.get_collective_stats()
             self._json_response({"result": stats})
-        elif self.path == "/tool/nc_swarm":
-            swarm = self.server.protocol.get_swarm(data.get("filter", "all"))
-            self._json_response({"result": swarm})
+        elif self.path == "/tool/nc_collective":
+            collective = self.server.protocol.get_collective(data.get("filter", "all"))
+            self._json_response({"result": collective})
         else:
             self._json_response({"error": "tool not found"}, 404)
 
     def _handle_resource(self, resource):
         protocol = self.server.protocol
         if resource == "metrics":
-            self._json_response(protocol.get_swarm_stats())
-        elif resource == "swarm":
-            self._json_response(protocol.get_swarm("all"))
+            self._json_response(protocol.get_collective_stats())
+        elif resource == "collective":
+            self._json_response(protocol.get_collective("all"))
         elif resource == "manifest":
             self._json_response(AGENT_MANIFEST)
         else:
@@ -377,7 +377,7 @@ class AgentMCPServer:
         print(f"   Agent Manifest: http://{self.host}:{self.port}/manifest")
         print(f"   Agent Register: POST http://{self.host}:{self.port}/tool/nc_register")
         print(f"   Agent Query:    POST http://{self.host}:{self.port}/tool/nc_query")
-        print(f"   Swarm View:     GET  http://{self.host}:{self.port}/resource/swarm")
+        print(f"   Collective View:     GET  http://{self.host}:{self.port}/resource/collective")
         print(f"   Health Check:   GET  http://{self.host}:{self.port}/health")
         try:
             self.server.serve_forever()
@@ -392,10 +392,10 @@ class AgentMCPServer:
 
     def tick(self):
         """One maintenance cycle."""
-        stats = self.protocol.get_swarm_stats()
+        stats = self.protocol.get_collective_stats()
         save_json(AGENT_LOG, self.protocol.connections)
         save_json(AGENT_MEMORY, self.protocol.memory)
-        save_json(SWARM_MAP, self.protocol.swarm)
+        save_json(COLLECTIVE_MAP, self.protocol.collective)
         return stats
 
 
@@ -410,9 +410,9 @@ if __name__ == "__main__":
         print(json.dumps(stats, indent=2))
     elif len(sys.argv) > 1 and sys.argv[1] == "stats":
         protocol = AgentProtocol()
-        print(json.dumps(protocol.get_swarm_stats(), indent=2))
+        print(json.dumps(protocol.get_collective_stats(), indent=2))
     else:
         print("Usage:")
         print("  python3 02-agent-mcp-server.py start [port]   # Start MCP server for agents")
         print("  python3 02-agent-mcp-server.py tick           # Maintenance cycle")
-        print("  python3 02-agent-mcp-server.py stats          # Swarm statistics")
+        print("  python3 02-agent-mcp-server.py stats          # Collective statistics")

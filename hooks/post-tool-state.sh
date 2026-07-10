@@ -61,7 +61,7 @@ main() {
 
     # ─── CRASH FILTER: Bicameral correction check ───
     # Before writing crash log, check if the auditor has flagged this as
-    # a false positive pattern. If so, route through crash_buffer absorb
+    # a environmental variance pattern. If so, route through crash_buffer absorb
     # instead of flooding the crash log.
     local suppress_crash="false"
     if [ "$exit_code" != "0" ]; then

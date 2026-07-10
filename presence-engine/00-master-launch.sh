@@ -1,12 +1,12 @@
 #!/bin/bash
 # =============================================================================
-# NeuralCline — Hype Engine Master Launch Script
+# NeuralCline — Attention Engine: Monitor & Metrics Collection
 # =============================================================================
-# Launches all 5 modules of the hype engine plus the live dashboard.
-# Can run in daemon mode, interactive mode, or one-shot mode.
+# Collects runtime metrics, monitors session health, and powers the live
+# dashboard. No automated posting, no SEO injection, no viral tricks.
 #
 # Usage:
-#   bash 00-master-launch.sh daemon       # Start background daemon
+#   bash 00-master-launch.sh daemon       # Start background metrics collector
 #   bash 00-master-launch.sh interactive  # Start interactive console
 #   bash 00-master-launch.sh status       # Show engine status
 #   bash 00-master-launch.sh deploy       # Deploy dashboard to GitHub Pages
@@ -41,10 +41,10 @@ mkdir -p "$STATE_DIR" "$ENGINE_DIR"
 
 # ─── Test all modules ────────────────────────────────────────────
 test_modules() {
-    echo -e "\n${BLUE}[TEST] Testing all hype engine modules...${NC}\n"
+    echo -e "\n${BLUE}[TEST] Testing all presence engine modules...${NC}\n"
     local failures=0
 
-    for module in "01-inquiry-engine.py" "02-agent-mcp-server.py" "03-download-tracker.py" "04-hype-orchestrator.py"; do
+    for module in "01-inquiry-engine.py" "02-agent-mcp-server.py" "03-download-tracker.py" "04-presence-orchestrator.py"; do
         echo -n "  Testing $module ... "
         if python3 "$ENGINE_DIR/$module" 2>&1 | head -1 > /dev/null; then
             echo -e "${GREEN}OK${NC}"
@@ -55,7 +55,7 @@ test_modules() {
     done
 
     echo -n "  Testing dashboard HTML ... "
-    if [ -f "$ENGINE_DIR/05-hype-dashboard.html" ]; then
+    if [ -f "$ENGINE_DIR/05-presence-dashboard.html" ]; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}MISSING${NC}"
@@ -73,28 +73,28 @@ test_modules() {
 
 # ─── Deploy dashboard to GitHub Pages ────────────────────────────
 deploy_dashboard() {
-    echo -e "\n${BLUE}[DEPLOY] Deploying hype dashboard to GitHub Pages...${NC}\n"
+    echo -e "\n${BLUE}[DEPLOY] Deploying presence dashboard to GitHub Pages...${NC}\n"
 
     # Copy dashboard HTML to docs/ for GitHub Pages
-    cp "$ENGINE_DIR/05-hype-dashboard.html" "$DOCS_DIR/hype-dashboard.html"
+    cp "$ENGINE_DIR/05-presence-dashboard.html" "$DOCS_DIR/presence-dashboard.html"
 
     # Copy state JSON files for dashboard to reference
-    for f in hype-state.json inquiry-log.json agent-connections.json download-log.json; do
+    for f in presence-state.json inquiry-log.json agent-connections.json download-log.json; do
         if [ -f "$ENGINE_DIR/$f" ]; then
-            cp "$ENGINE_DIR/$f" "$DOCS_DIR/hype-$f"
+            cp "$ENGINE_DIR/$f" "$DOCS_DIR/presence-$f"
         fi
     done
 
     # Update the sitemap
-    echo -e "  Adding hype-dashboard.html to sitemap..."
+    echo -e "  Adding presence-dashboard.html to sitemap..."
 
     # Commit and push
     cd /root/NeuralCline
-    git add docs/hype-dashboard.html docs/hype-*.json 2>/dev/null || true
+    git add docs/presence-dashboard.html docs/presence-*.json 2>/dev/null || true
     git commit -m "🧠 Deploy Hype Engine dashboard [automated]" 2>/dev/null || true
     git push origin master 2>/dev/null || echo -e "${YELLOW}  ⚠ Push skipped (not on master or no changes)${NC}"
 
-    echo -e "\n${GREEN}✅ Dashboard deployed: https://edgecase-1.github.io/NeuralCline/hype-dashboard.html${NC}"
+    echo -e "\n${GREEN}✅ Dashboard deployed: https://edgecase-1.github.io/NeuralCline/presence-dashboard.html${NC}"
 }
 
 # ─── Show status ─────────────────────────────────────────────────
@@ -102,11 +102,11 @@ show_status() {
     echo -e "\n${BLUE}[STATUS] Hype Engine Status${NC}\n"
 
     # Check if daemon is running
-    if [ -f "$ENGINE_DIR/hype-state.json" ]; then
+    if [ -f "$ENGINE_DIR/presence-state.json" ]; then
         echo -e "  ${CYAN}Hype State:${NC}"
         python3 -c "
 import json
-with open('$ENGINE_DIR/hype-state.json') as f:
+with open('$ENGINE_DIR/presence-state.json') as f:
     s = json.load(f)
 print(f'    Status: {s.get(\"status\", \"unknown\")}')
 print(f'    Cycles: {s.get(\"cycle_count\", 0)}')
@@ -115,7 +115,7 @@ print(f'    Interactive: {s.get(\"interactive_mode\", False)}')
 print(f'    Errors: {len(s.get(\"errors\", []))}')
 " 2>/dev/null || echo "    (unable to parse)"
     else
-        echo -e "  ${YELLOW}No hype state file found. Run 'tick' first.${NC}"
+        echo -e "  ${YELLOW}No presence state file found. Run 'tick' first.${NC}"
     fi
 
     # Check for agent MCP server
@@ -127,7 +127,7 @@ print(f'    Errors: {len(s.get(\"errors\", []))}')
 
     # Check state files
     echo -e "\n  ${CYAN}Engine State Files:${NC}"
-    for f in hype-state.json inquiry-log.json agent-connections.json download-log.json schedule.json; do
+    for f in presence-state.json inquiry-log.json agent-connections.json download-log.json schedule.json; do
         fpath="$ENGINE_DIR/$f"
         if [ -f "$fpath" ]; then
             size=$(stat -c%s "$fpath" 2>/dev/null || echo "?")
@@ -151,7 +151,7 @@ start_daemon() {
     echo -e "  ${GREEN}Agent MCP Server PID: $MCP_PID${NC}"
 
     # Start the orchestrator daemon
-    python3 "$ENGINE_DIR/04-hype-orchestrator.py" daemon "$interval"
+    python3 "$ENGINE_DIR/04-presence-orchestrator.py" daemon "$interval"
     
     # Cleanup on exit
     kill $MCP_PID 2>/dev/null || true
@@ -160,13 +160,13 @@ start_daemon() {
 # ─── Start interactive ───────────────────────────────────────────
 start_interactive() {
     echo -e "\n${BLUE}[INTERACTIVE] Starting Hype Engine interactive console...${NC}\n"
-    python3 "$ENGINE_DIR/04-hype-orchestrator.py" interactive
+    python3 "$ENGINE_DIR/04-presence-orchestrator.py" interactive
 }
 
 # ─── Run one tick ────────────────────────────────────────────────
 run_tick() {
     echo -e "\n${BLUE}[TICK] Running one full engine cycle...${NC}\n"
-    python3 "$ENGINE_DIR/04-hype-orchestrator.py" tick
+    python3 "$ENGINE_DIR/04-presence-orchestrator.py" tick
 }
 
 # =============================================================================
@@ -206,7 +206,7 @@ case "${1:-help}" in
         echo ""
         echo "Quick start:"
         echo "  bash 00-master-launch.sh test     # verify everything works"
-        echo "  bash 00-master-launch.sh daemon   # start the hype engine"
+        echo "  bash 00-master-launch.sh daemon   # start the presence engine"
         echo "  bash 00-master-launch.sh status   # check what's happening"
         echo ""
         ;;

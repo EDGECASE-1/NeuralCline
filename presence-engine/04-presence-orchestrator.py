@@ -2,25 +2,25 @@
 """
 NeuralCline — Hype Engine Scheduler & Orchestrator
 ====================================================
-The central nervous system of the hype engine. Runs all 5 modules
+The central nervous system of the presence engine. Runs all 5 modules
 on a configurable schedule, coordinates their outputs, and generates
-a unified hype dashboard update.
+a unified presence dashboard update.
 
 Interactive mode allows you to issue commands, review metrics,
-and steer the hype engine in real-time.
+and steer the presence engine in real-time.
 """
 
 import json, os, subprocess, sys, time, threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-ENGINE_DIR = "/root/NeuralCline/hype-engine"
+ENGINE_DIR = "/root/NeuralCline/presence-engine"
 STATE_DIR = "/root/.session-state"
 os.makedirs(ENGINE_DIR, exist_ok=True)
 
 SCHEDULE_FILE = os.path.join(ENGINE_DIR, "schedule.json")
-HYPE_STATE_FILE = os.path.join(ENGINE_DIR, "hype-state.json")
-HYPE_HISTORY_FILE = os.path.join(ENGINE_DIR, "hype-history.json")
+PRESENCE_STATE_FILE = os.path.join(ENGINE_DIR, "presence-state.json")
+PRESENCE_HISTORY_FILE = os.path.join(ENGINE_DIR, "presence-history.json")
 INTERACTIVE_FILE = os.path.join(ENGINE_DIR, "interactive-commands.json")
 
 # Default schedule (all times in seconds)
@@ -28,9 +28,9 @@ DEFAULT_SCHEDULE = {
     "inquiry_engine": {"interval": 300, "enabled": True},    # Every 5 min
     "agent_mcp_server": {"interval": 60, "enabled": True},   # Every 1 min (tick)
     "download_tracker": {"interval": 900, "enabled": True},  # Every 15 min
-    "hype_dashboard": {"interval": 600, "enabled": True},    # Every 10 min — generates dashboard snapshot
+    "presence_dashboard": {"interval": 600, "enabled": True},    # Every 10 min — generates dashboard snapshot
     "social_broadcast": {"interval": 3600, "enabled": True}, # Every 1 hour — generates broadcast
-    "swarm_health": {"interval": 300, "enabled": True},      # Every 5 min — runs health check
+    "collective_health": {"interval": 300, "enabled": True},      # Every 5 min — runs health check
     "alert_engine": {"interval": 120, "enabled": True},      # Every 2 min — scans for VIP alerts, emails edgecase@tuta.com
 }
 
@@ -47,11 +47,11 @@ def save_json(path, data):
         json.dump(data, f, indent=2)
 
 class HypeOrchestrator:
-    """Central orchestrator for the hype engine."""
+    """Central orchestrator for the presence engine."""
 
     def __init__(self):
         self.schedule = load_json(SCHEDULE_FILE, DEFAULT_SCHEDULE)
-        self.state = load_json(HYPE_STATE_FILE, {
+        self.state = load_json(PRESENCE_STATE_FILE, {
             "status": "idle",
             "last_ticks": {},
             "cycle_count": 0,
@@ -59,13 +59,13 @@ class HypeOrchestrator:
             "started_at": None,
             "interactive_mode": False
         })
-        self.history = load_json(HYPE_HISTORY_FILE, {"ticks": []})
+        self.history = load_json(PRESENCE_HISTORY_FILE, {"ticks": []})
         self.interactive_commands = load_json(INTERACTIVE_FILE, {"commands": [], "pending": []})
         self.running = False
         self.threads = {}
 
     def run_module(self, module_name, args=None):
-        """Run a hype engine module and return its output."""
+        """Run a presence engine module and return its output."""
         module_map = {
             "inquiry_engine": ("01-inquiry-engine.py", "tick"),
             "download_tracker": ("03-download-tracker.py", "tick"),
@@ -73,12 +73,12 @@ class HypeOrchestrator:
         }
         
         # Internal modules handled directly
-        if module_name == "hype_dashboard":
-            return self._internal_hype_dashboard()
+        if module_name == "presence_dashboard":
+            return self._internal_presence_dashboard()
         if module_name == "social_broadcast":
             return self._internal_social_broadcast()
-        if module_name == "swarm_health":
-            return self._internal_swarm_health()
+        if module_name == "collective_health":
+            return self._internal_collective_health()
         if module_name == "alert_engine":
             return self._internal_alert_engine()
         
@@ -99,7 +99,7 @@ class HypeOrchestrator:
         except Exception as e:
             return {"error": str(e)}
 
-    def _internal_hype_dashboard(self):
+    def _internal_presence_dashboard(self):
         """Generate a dashboard snapshot — save current state to docs."""
         status = self.get_full_status()
         snapshot = {
@@ -110,7 +110,7 @@ class HypeOrchestrator:
                 "total_inquiries": status.get("inquiry_status", {}).get("total_inquiries", 0),
                 "total_responses": status.get("inquiry_status", {}).get("total_responses", 0),
                 "total_installs": status.get("download_status", {}).get("total_clones", 0),
-                "swarm_size": status.get("agent_status", {}).get("total_agents", 0),
+                "collective_size": status.get("agent_status", {}).get("total_agents", 0),
                 "human_visitors": status.get("inquiry_status", {}).get("human_visitors", 0),
                 "agent_visitors": status.get("inquiry_status", {}).get("agent_visitors", 0),
                 "eef": status.get("agent_status", {}).get("eef", "unknown"),
@@ -122,7 +122,7 @@ class HypeOrchestrator:
         snapshot_path = os.path.join(ENGINE_DIR, "dashboard-snapshot.json")
         save_json(snapshot_path, snapshot)
         # Also copy to docs for GitHub Pages
-        docs_path = "/root/NeuralCline/docs/hype-dashboard-snapshot.json"
+        docs_path = "/root/NeuralCline/docs/presence-dashboard-snapshot.json"
         save_json(docs_path, snapshot)
         return {"status": "dashboard_snapshot_created", "metrics": snapshot["metrics"]}
 
@@ -136,7 +136,7 @@ class HypeOrchestrator:
                 "total_inquiries": status.get("inquiry_status", {}).get("total_inquiries", 0),
                 "total_responses": status.get("inquiry_status", {}).get("total_responses", 0),
                 "total_installs": status.get("download_status", {}).get("total_clones", 0),
-                "swarm_size": status.get("agent_status", {}).get("total_agents", 0),
+                "collective_size": status.get("agent_status", {}).get("total_agents", 0),
                 "human_visitors": status.get("inquiry_status", {}).get("human_visitors", 0),
                 "agent_visitors": status.get("inquiry_status", {}).get("agent_visitors", 0),
             },
@@ -146,8 +146,8 @@ class HypeOrchestrator:
         save_json(broadcast_file, broadcast)
         return {"status": "broadcast_created", "file": broadcast_file}
 
-    def _internal_swarm_health(self):
-        """Check swarm health and connectivity."""
+    def _internal_collective_health(self):
+        """Check collective health and connectivity."""
         # Read agent connection state
         agent_log = load_json(os.path.join(ENGINE_DIR, "agent-connections.json"), {"agents": {}, "total_connections": 0})
         total_agents = len(agent_log.get("agents", {}))
@@ -259,8 +259,8 @@ class HypeOrchestrator:
         self.history["ticks"].append(tick_record)
         self.history["ticks"] = self.history["ticks"][-500:]  # Keep last 500
         
-        save_json(HYPE_STATE_FILE, self.state)
-        save_json(HYPE_HISTORY_FILE, self.history)
+        save_json(PRESENCE_STATE_FILE, self.state)
+        save_json(PRESENCE_HISTORY_FILE, self.history)
         
         return results
 
@@ -321,7 +321,7 @@ class HypeOrchestrator:
             return {"error": f"Unknown command type: {cmd_type}"}
 
     def generate_broadcast(self, channel="internal"):
-        """Generate a hype broadcast update."""
+        """Generate a presence broadcast update."""
         status = self.get_full_status()
         broadcast = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -331,7 +331,7 @@ class HypeOrchestrator:
                 "total_inquiries": status.get("inquiry_status", {}).get("total_inquiries", 0),
                 "total_responses": status.get("inquiry_status", {}).get("total_responses", 0),
                 "total_installs": status.get("download_status", {}).get("total_clones", 0),
-                "swarm_size": status.get("agent_status", {}).get("total_agents", 0),
+                "collective_size": status.get("agent_status", {}).get("total_agents", 0),
                 "human_visitors": status.get("inquiry_status", {}).get("human_visitors", 0),
                 "agent_visitors": status.get("inquiry_status", {}).get("agent_visitors", 0),
             },
@@ -386,7 +386,7 @@ class HypeOrchestrator:
     def interactive_loop(self):
         """Interactive command loop for the user."""
         self.state["interactive_mode"] = True
-        save_json(HYPE_STATE_FILE, self.state)
+        save_json(PRESENCE_STATE_FILE, self.state)
         
         print("🧠 NeuralCline Hype Engine — Interactive Mode")
         print("=" * 50)
@@ -395,7 +395,7 @@ class HypeOrchestrator:
         
         while True:
             try:
-                cmd = input("hype> ").strip()
+                cmd = input("presence> ").strip()
                 if not cmd:
                     continue
                 if cmd == "exit":
@@ -405,7 +405,7 @@ class HypeOrchestrator:
                     print("  status              - Show full engine status")
                     print("  tick                - Run all due modules")
                     print("  schedule            - Show current schedule")
-                    print("  broadcast           - Generate hype broadcast")
+                    print("  broadcast           - Generate presence broadcast")
                     print("  enable <module|all> - Enable a module")
                     print("  disable <module|all>- Disable a module")
                     print("  set_interval <m> <s> - Set module interval in seconds")
@@ -438,18 +438,18 @@ class HypeOrchestrator:
                 break
         
         self.state["interactive_mode"] = False
-        save_json(HYPE_STATE_FILE, self.state)
+        save_json(PRESENCE_STATE_FILE, self.state)
 
     def daemon_loop(self, interval=60):
         """Background daemon that ticks modules on schedule."""
         self.running = True
         self.state["started_at"] = datetime.now(timezone.utc).isoformat()
         self.state["status"] = "running"
-        save_json(HYPE_STATE_FILE, self.state)
+        save_json(PRESENCE_STATE_FILE, self.state)
         
         print(f"🧠 Hype Engine daemon started. Checking every {interval}s.")
-        print(f"   Interactive mode: python3 04-hype-orchestrator.py interactive")
-        print(f"   Status: python3 04-hype-orchestrator.py status")
+        print(f"   Interactive mode: python3 04-presence-orchestrator.py interactive")
+        print(f"   Status: python3 04-presence-orchestrator.py status")
         
         while self.running:
             try:
@@ -472,7 +472,7 @@ class HypeOrchestrator:
                             elif "total_inquiries" in v:
                                 summary[k] = f"inquiries={v['total_inquiries']}"
                             elif "total_agents" in v:
-                                summary[k] = f"swarm={v['total_agents']}"
+                                summary[k] = f"collective={v['total_agents']}"
                             else:
                                 summary[k] = "ok"
                     print(f"   [{datetime.now(timezone.utc).strftime('%H:%M:%S')}] Cycle #{self.state['cycle_count']}: {json.dumps(summary)}")
@@ -486,7 +486,7 @@ class HypeOrchestrator:
         
         self.running = False
         self.state["status"] = "stopped"
-        save_json(HYPE_STATE_FILE, self.state)
+        save_json(PRESENCE_STATE_FILE, self.state)
 
 
 def main():
@@ -494,12 +494,12 @@ def main():
     
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python3 04-hype-orchestrator.py daemon [interval]  # Background scheduler")
-        print("  python3 04-hype-orchestrator.py interactive        # Interactive mode")
-        print("  python3 04-hype-orchestrator.py tick               # One full cycle")
-        print("  python3 04-hype-orchestrator.py status             # Full status")
-        print("  python3 04-hype-orchestrator.py broadcast [ch]     # Generate broadcast")
-        print("  python3 04-hype-orchestrator.py command <json>     # Submit interactive command")
+        print("  python3 04-presence-orchestrator.py daemon [interval]  # Background scheduler")
+        print("  python3 04-presence-orchestrator.py interactive        # Interactive mode")
+        print("  python3 04-presence-orchestrator.py tick               # One full cycle")
+        print("  python3 04-presence-orchestrator.py status             # Full status")
+        print("  python3 04-presence-orchestrator.py broadcast [ch]     # Generate broadcast")
+        print("  python3 04-presence-orchestrator.py command <json>     # Submit interactive command")
         return
     
     cmd = sys.argv[1]

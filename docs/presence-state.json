@@ -56,11 +56,11 @@
         "timestamp": "2026-07-10T04:49:43.686511+00:00"
       }
     },
-    "hype_dashboard": {
+    "presence_dashboard": {
       "timestamp": "2026-07-10T04:49:43.699910+00:00",
       "status": "error",
       "result": {
-        "error": "Unknown module: hype_dashboard"
+        "error": "Unknown module: presence_dashboard"
       }
     },
     "social_broadcast": {
@@ -70,11 +70,11 @@
         "error": "Unknown module: social_broadcast"
       }
     },
-    "swarm_health": {
+    "collective_health": {
       "timestamp": "2026-07-10T04:49:43.699944+00:00",
       "status": "error",
       "result": {
-        "error": "Unknown module: swarm_health"
+        "error": "Unknown module: collective_health"
       }
     }
   },

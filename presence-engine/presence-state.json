@@ -1,0 +1,139 @@
+{
+  "status": "running",
+  "last_ticks": {
+    "inquiry_engine": {
+      "timestamp": "2026-07-10T14:45:37.006207+00:00",
+      "status": "ok",
+      "result": {
+        "total_inquiries": 5,
+        "total_responses": 5,
+        "total_profiles": 1,
+        "human_visitors": 1,
+        "agent_visitors": 0,
+        "pending_responses": 0,
+        "intent_breakdown": {},
+        "last_tick": "2026-07-10T14:45:37.753454+00:00",
+        "new_inquiries": 0,
+        "new_responses": 0
+      }
+    },
+    "agent_mcp_server": {
+      "timestamp": "2026-07-10T14:49:03.120512+00:00",
+      "status": "ok",
+      "result": {
+        "total_agents": 0,
+        "roles": {},
+        "total_capabilities": 0,
+        "capabilities_list": [],
+        "eef": "unknown"
+      }
+    },
+    "download_tracker": {
+      "timestamp": "2026-07-10T14:45:37.861734+00:00",
+      "status": "ok",
+      "result": {
+        "new_clones": 0,
+        "total_clones": 0,
+        "stargazers_found": 0,
+        "forks_found": 0,
+        "install_velocity": {
+          "last_24h": 0,
+          "velocity_per_hour": 0.0,
+          "session_installs": 0,
+          "total_tracked": 0
+        },
+        "downloader_insights": {
+          "total_downloaders": 0,
+          "human_downloaders": 0,
+          "agent_downloaders": 0,
+          "stargazers": 0,
+          "forkers": 0,
+          "agent_ratio": 0.0,
+          "top_sources": {}
+        },
+        "last_24h": 0,
+        "last_7d": 0,
+        "timestamp": "2026-07-10T14:45:39.307052+00:00"
+      }
+    },
+    "presence_dashboard": {
+      "timestamp": "2026-07-10T14:45:39.315885+00:00",
+      "status": "ok",
+      "result": {
+        "status": "dashboard_snapshot_created",
+        "metrics": {
+          "total_inquiries": 5,
+          "total_responses": 5,
+          "total_installs": 0,
+          "collective_size": 0,
+          "human_visitors": 1,
+          "agent_visitors": 0,
+          "eef": "unknown",
+          "last_24h": 0,
+          "last_7d": 0
+        }
+      }
+    },
+    "social_broadcast": {
+      "timestamp": "2026-07-10T14:49:03.244911+00:00",
+      "status": "ok",
+      "result": {
+        "status": "broadcast_created",
+        "file": "/root/NeuralCline/presence-engine/broadcast-20260710-144904.json"
+      }
+    },
+    "collective_health": {
+      "timestamp": "2026-07-10T14:45:40.439944+00:00",
+      "status": "ok",
+      "result": {
+        "status": "idle",
+        "total_agents": 0,
+        "active_agents": 0,
+        "inactive_agents": 0,
+        "health_score": 0.0
+      }
+    },
+    "alert_engine": {
+      "timestamp": "2026-07-10T14:49:04.137659+00:00",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "alerts_processed": {
+          "urgent_sent": 0,
+          "batched": 0,
+          "errors": []
+        },
+        "stats": {
+          "alerts_sent": 0,
+          "urgent_alerts": 0,
+          "batched_alerts": 0,
+          "pending_in_queue": 0,
+          "urgent_holding": 0,
+          "last_alert": "2026-07-10T14:49:04.169651+00:00",
+          "last_batch": "2026-07-10T14:49:04.169651+00:00",
+          "config": {
+            "email_to": "edgecase@tuta.com",
+            "email_from": "neuralcline-presence@edgecase.dev",
+            "delivery_method": "api",
+            "api_endpoint": "",
+            "api_key_env": "env:ALERT_API_KEY",
+            "smtp_server": "",
+            "smtp_port": 587,
+            "smtp_username": "",
+            "smtp_password_env": "env:ALERT_SMTP_PASSWORD",
+            "batch_interval_minutes": 60,
+            "urgent_immediate": true,
+            "min_priority_for_alert": 50,
+            "max_alerts_per_batch": 10,
+            "enabled": true
+          }
+        }
+      }
+    }
+  },
+  "cycle_count": 6,
+  "errors": [],
+  "started_at": "2026-07-10T14:49:03.119851+00:00",
+  "interactive_mode": false,
+  "last_full_tick": "2026-07-10T14:49:03.120500+00:00"
+}

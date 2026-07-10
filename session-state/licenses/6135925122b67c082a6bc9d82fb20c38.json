@@ -1,0 +1,23 @@
+{
+  "license_key": "NC-3BC5EE8B-C7DC1932-A0147350",
+  "email": "assess@test.io",
+  "tier": "enterprise",
+  "granted_at": "2026-07-10T13:01:16.871661+00:00",
+  "expires_at": "2026-08-09T13:01:16.871661+00:00",
+  "active": true,
+  "features": [
+    "Everything in Pro",
+    "Team management dashboard",
+    "SSO/SAML integration",
+    "Audit logging",
+    "Custom adapter development",
+    "Priority support",
+    "SLA guarantee",
+    "On-premise deployment option",
+    "30-day metrics retention"
+  ],
+  "validation_count": 1,
+  "last_validated": "2026-07-10T13:01:16.872133+00:00",
+  "metadata": {},
+  "version": "2.0.0"
+}

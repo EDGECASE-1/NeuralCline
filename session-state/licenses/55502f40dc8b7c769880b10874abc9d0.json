@@ -1,0 +1,13 @@
+{
+  "license_key": "NC-88880801-78E071A9-F8544B4E",
+  "email": "test@example.com",
+  "tier": "pro",
+  "granted_at": "2026-07-10T10:45:49.348970+00:00",
+  "expires_at": null,
+  "active": true,
+  "features": [],
+  "validation_count": 0,
+  "last_validated": null,
+  "metadata": {},
+  "version": "2.0.0"
+}

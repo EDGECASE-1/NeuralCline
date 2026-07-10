@@ -173,7 +173,7 @@
     </div>
     <div class="card">
       <div class="card-header"><span class="card-title">🧠 Swarm Size</span></div>
-      <div class="card-value metric-purple" id="swarmSize">--</div>
+      <div class="card-value metric-purple" id="collectiveSize">--</div>
       <div class="card-label">Connected AI agents</div>
     </div>
     <div class="card">
@@ -230,7 +230,7 @@
     <!-- Swarm Roles -->
     <div class="card">
       <div class="card-header"><span class="card-title">🐝 Swarm Roles</span></div>
-      <div id="swarmRoles">
+      <div id="collectiveRoles">
         <div class="source-item"><span class="source-name">Builders</span><span class="source-count" id="roleBuilders">--</span></div>
         <div class="source-item"><span class="source-name">Analysts</span><span class="source-count" id="roleAnalysts">--</span></div>
         <div class="source-item"><span class="source-name">Communicators</span><span class="source-count" id="roleCommunicators">--</span></div>
@@ -290,16 +290,16 @@ function fetchStatus() {
   document.getElementById('lastUpdated').textContent = 'Refreshing...';
   document.getElementById('lastUpdated').classList.add('refreshing');
 
-  fetch('/root/NeuralCline/hype-engine/hype-state.json')
+  fetch('/root/NeuralCline/presence-engine/hype-state.json')
     .then(r => r.json())
     .catch(() => ({}))
     .then(state => {
       // Also try to fetch individual module stats
       return Promise.all([
         Promise.resolve(state),
-        fetch('/root/NeuralCline/hype-engine/inquiry-log.json').then(r => r.json()).catch(() => ({})),
-        fetch('/root/NeuralCline/hype-engine/agent-connections.json').then(r => r.json()).catch(() => ({})),
-        fetch('/root/NeuralCline/hype-engine/download-log.json').then(r => r.json()).catch(() => ({}))
+        fetch('/root/NeuralCline/presence-engine/inquiry-log.json').then(r => r.json()).catch(() => ({})),
+        fetch('/root/NeuralCline/presence-engine/agent-connections.json').then(r => r.json()).catch(() => ({})),
+        fetch('/root/NeuralCline/presence-engine/download-log.json').then(r => r.json()).catch(() => ({}))
       ]);
     })
     .then(([state, inquiries, agents, downloads]) => {
@@ -333,7 +333,7 @@ function updateDashboard(state, inquiries, agents, downloads) {
 
   // Agent data
   const agentStats = state?.last_ticks?.agent_mcp_server?.result || {};
-  document.getElementById('swarmSize').textContent = agentStats.total_agents ?? agents?.total_connections ?? '--';
+  document.getElementById('collectiveSize').textContent = agentStats.total_agents ?? agents?.total_connections ?? '--';
   
   const roles = agentStats.roles || {};
   document.getElementById('roleBuilders').textContent = roles.builder || 0;
@@ -379,7 +379,7 @@ function updateDashboard(state, inquiries, agents, downloads) {
       const a = agentEntries[id];
       const statusClass = a?.status === 'active' ? 'agent-active' : 'agent-idle';
       return `<div class="agent-item">
-        <div><div class="agent-name">${id}</div><div class="agent-role">${a?.swarm_role || 'explorer'}</div></div>
+        <div><div class="agent-name">${id}</div><div class="agent-role">${a?.collective_role || 'explorer'}</div></div>
         <div class="agent-status ${statusClass}">${a?.status || 'unknown'}</div>
       </div>`;
     }).join('');
@@ -427,7 +427,7 @@ function updateDashboard(state, inquiries, agents, downloads) {
 function updateDashboardFromAPI(data) {
   // Minimal API fallback
   document.getElementById('totalInquiries').textContent = data?.inquiry_status?.total_inquiries || '--';
-  document.getElementById('swarmSize').textContent = data?.agent_status?.total_agents || '--';
+  document.getElementById('collectiveSize').textContent = data?.agent_status?.total_agents || '--';
   document.getElementById('totalInstalls').textContent = data?.download_status?.total_downloaders || '--';
   document.getElementById('eefValue').textContent = data?.agent_status?.eef || '0.3';
   document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();

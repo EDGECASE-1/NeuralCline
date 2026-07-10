@@ -1,0 +1,21 @@
+{
+  "session_id": "daafb0d2-6f91-4e03-bb03-507a077f503c",
+  "session_start": "2026-07-10T12:54:12Z",
+  "last_updated": "2026-07-10T12:54:12Z",
+  "last_command": "",
+  "last_exit_code": 0,
+  "last_output_size": 0,
+  "last_proximity": 0,
+  "tool_call_count": 0,
+  "context_usage_pct": 0,
+  "current_context_tokens": 0,
+  "max_context_tokens": 100000,
+  "session_start_count": 1,
+  "total_session_count": 1,
+  "file_scope_list": [],
+  "active_goals": [],
+  "next_steps": [],
+  "adapter": "unknown",
+  "model": "unknown",
+  "version": "2.0.0"
+}

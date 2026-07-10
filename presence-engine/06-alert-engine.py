@@ -12,7 +12,7 @@ import json, os, subprocess, sys, time, re
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-ENGINE_DIR = "/root/NeuralCline/hype-engine"
+ENGINE_DIR = "/root/NeuralCline/presence-engine"
 STATE_DIR = "/root/.session-state"
 os.makedirs(ENGINE_DIR, exist_ok=True)
 
@@ -23,7 +23,7 @@ ALERT_QUEUE_FILE = os.path.join(ENGINE_DIR, "alert-queue.json")
 # ─── Default Alert Configuration ────────────────────────────────
 DEFAULT_CONFIG = {
     "email_to": "edgecase@tuta.com",
-    "email_from": "neuralcline-hype@edgecase.dev",
+    "email_from": "neuralcline-presence@edgecase.dev",
     "delivery_method": "api",  # "api", "smtp", "sendmail", "file"
     "api_endpoint": "",  # Set to your Mailgun/SendGrid endpoint
     "api_key_env": "ALERT_API_KEY",  # Environment variable name for API key
@@ -240,7 +240,7 @@ class AlertEngine:
         telemetry = {}
 
         # From current state
-        state = load_json(os.path.join(ENGINE_DIR, "hype-state.json"), {})
+        state = load_json(os.path.join(ENGINE_DIR, "presence-state.json"), {})
         telemetry["cycle_count"] = state.get("cycle_count", 0)
         telemetry["engine_status"] = state.get("status", "unknown")
 
@@ -255,9 +255,9 @@ class AlertEngine:
         telemetry["last_24h"] = dl.get("last_24h", 0)
         telemetry["last_7d"] = dl.get("last_7d", 0)
 
-        # From agent swarm
+        # From agent collective
         agents = load_json(os.path.join(ENGINE_DIR, "agent-connections.json"), {"agents": {}})
-        telemetry["swarm_size"] = len(agents.get("agents", {}))
+        telemetry["collective_size"] = len(agents.get("agents", {}))
 
         # From downloader profiles
         profiles = load_json(os.path.join(ENGINE_DIR, "downloader-profiles.json"), {"profiles": {}})
@@ -309,13 +309,13 @@ Pending Responses: {telemetry.get('pending_responses', '?')}
 Total Clones/Installs: {telemetry.get('total_clones', '?')}
 Last 24h: {telemetry.get('last_24h', '?')}
 Last 7d: {telemetry.get('last_7d', '?')}
-Swarm Size: {telemetry.get('swarm_size', '?')}
+Collective Size: {telemetry.get('collective_size', '?')}
 Total Downloaders: {telemetry.get('total_downloaders', '?')}
 EEF: {telemetry.get('eef', '?')}
 
 === Action Items ===
 1. Check the inquiry: {alert['url']}
-2. Review dashboard: https://edgecase-1.github.io/NeuralCline/hype-dashboard.html
+2. Review dashboard: https://edgecase-1.github.io/NeuralCline/presence-dashboard.html
 3. Respond appropriately (CEO/CTO level = personal response)
 
 ---
@@ -364,12 +364,12 @@ Total Inquiries: {telemetry.get('total_inquiries', '?')}
 Pending Responses: {telemetry.get('pending_responses', '?')}
 Total Clones: {telemetry.get('total_clones', '?')}
 Last 24h Activity: {telemetry.get('last_24h', '?')}
-Swarm Size: {telemetry.get('swarm_size', '?')}
+Collective Size: {telemetry.get('collective_size', '?')}
 Total Downloaders: {telemetry.get('total_downloaders', '?')}
 EEF: {telemetry.get('eef', '?')}
 
 ===
-Dashboard: https://edgecase-1.github.io/NeuralCline/hype-dashboard.html
+Dashboard: https://edgecase-1.github.io/NeuralCline/presence-dashboard.html
 GitHub: https://github.com/EDGECASE-1/NeuralCline
 """
         return subject, body
@@ -378,7 +378,7 @@ GitHub: https://github.com/EDGECASE-1/NeuralCline
         """Send an email to edgecase@tuta.com using available delivery method."""
         method = self.config.get("delivery_method", "file")
         to = self.config.get("email_to", "edgecase@tuta.com")
-        from_addr = self.config.get("email_from", "neuralcline@hype.engine")
+        from_addr = self.config.get("email_from", "neuralcline@presence.engine")
 
         # Always save to file as backup
         log_dir = os.path.join(ENGINE_DIR, "email-log")
@@ -544,7 +544,7 @@ GitHub: https://github.com/EDGECASE-1/NeuralCline
         print(f"\nTo send real email, configure one of:")
         print("  1. API (Mailgun/SendGrid) — set ALERT_API_KEY env var + endpoint")
         print("  2. SMTP — set ALERT_SMTP_PASSWORD env var + server details")
-        print("  3. File-only — emails are saved to hype-engine/email-log/")
+        print("  3. File-only — emails are saved to presence-engine/email-log/")
         print("\nTo set API key: export ALERT_API_KEY='your-key-here'")
         print("To set SMTP password: export ALERT_SMTP_PASSWORD='your-password'")
         print("\nCurrent alerts are saved to file by default.\n")

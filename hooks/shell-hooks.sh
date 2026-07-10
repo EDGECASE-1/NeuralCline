@@ -64,7 +64,7 @@ __neural_precmd() {
     # ── Detect crash (exit code != 0) with bicameral noise suppression ──
     local crash_detected=0
     local suppress_crash=0
-    local noise_patterns=("__vsc_original_prompt_command" "__vsc_prompt_cmd_original" "__vsc_preexec_all" "PROMPT_COMMAND" "cd /root/NeuralCline" "cd /root/NeuralCline/hype-engine" "cd /root/NeuralCline/presence-engine" "source /root" "ls --color" "cat " "diagnose.sh" "tail -" "generate-handoff.sh" "read_file" "grep --color" "timeout " "write_crash_log" "compute_proximity" "predict_timeout" "wc -l " "rm ")
+    local noise_patterns=("__vsc_original_prompt_command" "__vsc_prompt_cmd_original" "__vsc_preexec_all" "PROMPT_COMMAND" "cd /root/NeuralCline" "cd /root/NeuralCline/presence-engine" "cd /root/NeuralCline/presence-engine" "source /root" "ls --color" "cat " "diagnose.sh" "tail -" "generate-handoff.sh" "read_file" "grep --color" "timeout " "write_crash_log" "compute_proximity" "predict_timeout" "wc -l " "rm ")
     if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 130 ] && [ "$exit_code" -ne 141 ]; then
         # Check noise patterns first (fast, no I/O)
         for pattern in "${noise_patterns[@]}"; do

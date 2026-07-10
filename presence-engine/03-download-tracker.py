@@ -12,7 +12,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 STATE_DIR = "/root/.session-state"
-ENGINE_DIR = "/root/NeuralCline/hype-engine"
+ENGINE_DIR = "/root/NeuralCline/presence-engine"
 os.makedirs(ENGINE_DIR, exist_ok=True)
 
 DOWNLOADS_FILE = os.path.join(ENGINE_DIR, "download-log.json")

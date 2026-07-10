@@ -1,0 +1,9 @@
+{
+  "alerts_sent": 0,
+  "urgent_alerts": 0,
+  "batched_alerts": 0,
+  "last_alert_time": "2026-07-10T14:49:04.169651+00:00",
+  "last_batch_time": "2026-07-10T14:49:04.169651+00:00",
+  "alerts": [],
+  "telemetry_snapshots": []
+}
