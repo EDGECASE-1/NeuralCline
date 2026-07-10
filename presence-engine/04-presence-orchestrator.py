@@ -32,6 +32,7 @@ DEFAULT_SCHEDULE = {
     "social_broadcast": {"interval": 3600, "enabled": True}, # Every 1 hour — generates broadcast
     "collective_health": {"interval": 300, "enabled": True},      # Every 5 min — runs health check
     "alert_engine": {"interval": 120, "enabled": True},      # Every 2 min — scans for VIP alerts, emails edgecase@tuta.com
+    "crash_backtracker": {"interval": 60, "enabled": True}   # Every 60s — learns from crashes
 }
 
 def load_json(path, default=None):
@@ -81,6 +82,8 @@ class HypeOrchestrator:
             return self._internal_collective_health()
         if module_name == "alert_engine":
             return self._internal_alert_engine()
+        if module_name == "crash_backtracker":
+            return self._internal_crash_backtracker()
         
         if module_name not in module_map:
             return {"error": f"Unknown module: {module_name}"}
@@ -166,6 +169,24 @@ class HypeOrchestrator:
             "inactive_agents": total_agents - active_agents,
             "health_score": round((active_agents / max(total_agents, 1)) * 100, 1)
         }
+
+    def _internal_crash_backtracker(self):
+        """Run crash pattern backtracker — learns from crash-log.ndjson."""
+        try:
+            import subprocess
+            proc = subprocess.run(
+                ["python3", "/root/NeuralCline/lib/crash_backtracker.py", "scan"],
+                capture_output=True, text=True, timeout=120
+            )
+            output = proc.stdout.strip()
+            result = {}
+            for line in output.split(chr(10)):
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    result[k.lower()] = v
+            return result if result else {"status": "ok", "scanned": 0}
+        except Exception as e:
+            return {"error": str(e)}
 
     def _internal_alert_engine(self):
         """Run the alert engine — scan for VIPs, send email to edgecase@tuta.com."""
