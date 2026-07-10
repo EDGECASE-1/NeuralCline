@@ -64,6 +64,17 @@ started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 status=running
 META
 
+    # Write command to a temp script file — avoids shell integration parsing the pipe chain
+    local script_file="$BUFFER_DIR/$buffer_id.sh"
+    cat > "$script_file" << EOF
+#!/bin/bash
+export __NEURAL_SUBPROCESS=1
+export BUFFER_ID="$buffer_id"
+$cmd
+exit \$?
+EOF
+    chmod +x "$script_file"
+
     # Fork into detached subprocess with setsid (no terminal attached)
     (
         # Redirect stdin, stdout, stderr away from the terminal
@@ -77,8 +88,8 @@ META
         # Record start
         local start_epoch=$(date +%s)
 
-        # Run the actual command
-        eval "$cmd" 2>&1
+        # Run the script file — not the raw command, so pipes/chains don't hit shell integration
+        bash "$script_file" 2>&1
         local exit_code=$?
 
         local end_epoch=$(date +%s)
