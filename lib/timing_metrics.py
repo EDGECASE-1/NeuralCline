@@ -95,6 +95,14 @@ def estimate_command_complexity(cmd):
     if re.search(r'\b(curl|wget|git clone|git pull|git push|npm install|pip install|apt install|yum install)\b', cmd):
         score += 3
 
+    # Multi-command chains with pipes — always high risk for shell integration hangs
+    if re.search(r'\b(git push|git pull|git clone|npm install|apt install|pip install)\b.*&&.*\|', cmd):
+        score += 5  # Extreme: chain + pipe = near-certain shell hang
+    if re.search(r'\|\s*(tail|head|grep|cat|less|more)\b', cmd) and re.search(r'\b(git|npm|apt|pip)\b', cmd):
+        score += 4  # Pipe after package/network command = high risk
+    if re.search(r'\bgit\b', cmd) and '&&' in cmd and '|' in cmd:
+        score += 5  # git + chain + pipe = guaranteed hang
+
     # Build operations
     if re.search(r'\b(make|cmake|gcc|clang|npm run build|webpack|vite build|tsc)\b', cmd):
         score += 2
