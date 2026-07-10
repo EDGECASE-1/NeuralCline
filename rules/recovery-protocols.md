@@ -127,6 +127,50 @@
 
 ---
 
+## Protocol H: Timing Degradation / Timeout Proximity Danger
+
+**Symptoms**: Commands regularly timing out, `pre-tool-guard.sh` reporting "TIMING DANGER" or "TIMING WARNING", high Execution Emulation Factor (EEF > 1.8).
+
+**Steps**:
+1. **Check current timing metrics**:
+   ```bash
+   python3 /root/NeuralCline/lib/timing_metrics.py read_timing
+   ```
+2. **Check EEF health**:
+   ```bash
+   python3 -c "import json; s=json.load(open('/root/.session-state/current-state.json')); t=s.get('timing_metrics',{}); print(f'EEF={t.get(\"execution_emulation_factor\",\"N/A\")} TimeoutProx={t.get(\"timeout_proximity\",\"N/A\")}/100')"
+   ```
+3. **If EEF > 2.0 (critical)**:
+   - **Fragment all operations**: Break every command into smaller pieces
+   - Always use `timeout 30s` wrapper for any heavy command
+   - Pipe large output through `head -50` or `grep` to limit capture
+   - Save checkpoint: `bash /root/NeuralCline/hooks/generate-handoff.sh`
+4. **If EEF > 1.5 (elevated)**:
+   - Use pagination (`head -200`, `tail -200`) for all file reads
+   - Avoid recursive scans (`find`, `grep -r`) without `--max-depth` or `head`
+   - Monitor timing after each command
+5. **Reset timing history** (if EEF is stuck high due to stale data):
+   ```bash
+   python3 -c "
+import json
+h = {'entries': [], 'command_patterns': {}, 'rolling_avg_ms': 0, 'rolling_window': [], 'last_updated': ''}
+with open('/root/.session-state/timing-history.json', 'w') as f:
+    json.dump(h, f, indent=2)
+print('Timing history reset')
+"
+   ```
+6. **Check for background processes** consuming resources:
+   ```bash
+   ps aux --sort=-%cpu | head -10
+   free -h
+   ```
+7. **Recover with reduced scope**:
+   ```bash
+   source /root/rehydration.md
+   ```
+
+---
+
 ## Quick Reference Card
 
 | Symptom | Protocol | First Action |
@@ -138,6 +182,7 @@
 | Infinite loop | E | Force handoff, review patterns |
 | File too large | F | `ls -lh`, read in chunks |
 | Suspected hang / stale state | G | `bash /root/NeuralCline/hooks/diagnose.sh` |
+| Timing degradation / timeout risk | H | `python3 /root/NeuralCline/lib/timing_metrics.py read_timing` |
 
 ---
 

@@ -93,7 +93,7 @@
 ## 🗓 Milestone Roadmap
 
 ```
-Jul 9   ████▌──────  Phase 2a done (install.sh)
+Jul 9   ███████▌───  Phase 2a+2f+2g done (diagnose + check_checkpoint)
 Jul 11  █████████▌─  Phase 2 done (stretch) ← WE ARE HERE
 Jul 13  ███████████  Phase 2 done (conservative)
 Jul 13  ███████████  Phase 3 done (stretch)

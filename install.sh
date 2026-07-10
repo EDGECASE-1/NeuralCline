@@ -212,18 +212,8 @@ SESSION_DIR="/root/.session-state"
 CHECKPOINT="$SESSION_DIR/checkpoint.json"
 
 if [ -f "$CHECKPOINT" ]; then
-    python3 -c "
-import json
-with open('$CHECKPOINT') as f:
-    cp = json.load(f)
-tools = cp.get('total_tool_calls', 0)
-ctx = cp.get('context_usage_pct', 0)
-cmd = cp.get('last_command', '')
-if tools > 0 or ctx > 0 or cmd:
-    print(f'[Neural Safety] Session checkpoint found: {tools} tools, {ctx}% context')
-    print(f'[Neural Safety] Last command: {cmd[:60]}...' if cmd else '')
-    print('[Neural Safety] Run: source /root/rehydration.md')
-" 2>/dev/null
+    python3 /root/NeuralCline/lib/state_engine.py check_checkpoint 2>/dev/null || \
+    echo "[Neural Safety] Run: source /root/rehydration.md"
 fi
 AUTOINIT
 
@@ -272,6 +262,7 @@ Protocol C (output fail): run `tail -5 /root/.session-state/crash-log.ndjson`
 Protocol D (crash): run `source /root/rehydration.md`
 Protocol E (infinite loop): run `bash /root/NeuralCline/hooks/generate-handoff.sh`
 Protocol F (big file): run `ls -lh <file>` then `head -100 <file>`
+Protocol G (diagnose): run `bash /root/NeuralCline/hooks/diagnose.sh`
 Full details in /root/NeuralCline/rules/recovery-protocols.md
 
 ## CRASH PROXIMITY DETECTION (auto-prevention)

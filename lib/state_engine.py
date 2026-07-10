@@ -220,16 +220,25 @@ def cmd_update_failure_points(args):
 
 
 def cmd_compute_proximity(args):
-    """Compute crash proximity score (0-100) for a command."""
+    """Compute crash proximity score (0-100) for a command.
+    
+    Enhanced with timing metrics:
+    - 35% Historical failure pattern matching
+    - 20% Context usage pressure
+    - 15% Command size & complexity
+    - 15% Known risk patterns
+    - 15% ⏱️ Execution Emulation Factor (EEF) + timeout proximity (NEW)
+    """
     command = args[0] if len(args) > 0 else ""
     file_scope = args[1] if len(args) > 1 else ""
 
     state = read_json(STATE_FILE, {})
     context_usage = state.get('context_usage_pct', 0)
+    timing = state.get('timing_metrics', {})
     score = 0
     matched_pattern = "none"
 
-    # 1. Historical failure point match (40%)
+    # 1. Historical failure point match (35%)
     fps = read_json(FAILURE_POINTS, {'failure_points': []})
     points = fps.get('failure_points', [])
 
@@ -249,18 +258,22 @@ def cmd_compute_proximity(args):
                 if weight > max_weight:
                     max_weight = weight
                     matched_pattern = pattern
-        score += int(max_weight * 40 / 100)
+        score += int(max_weight * 35 / 100)
 
-    # 2. Context usage (25%)
+    # 2. Context usage (20%)
     if context_usage > 60:
-        ctx_score = min(25, (context_usage - 60) * 25 // 40)
+        ctx_score = min(20, (context_usage - 60) * 20 // 40)
         score += ctx_score
 
-    # 3. Command size (20%)
+    # 3. Command size + complexity (15%)
     cmd_len = len(command)
+    complexity = timing.get('complexity', 1)
+    size_base = 0
     if cmd_len > 100:
-        size_score = min(20, (cmd_len - 100) * 20 // 900)
-        score += size_score
+        size_base = min(10, (cmd_len - 100) * 10 // 900)
+    # Complexity adds to this: complexity 1-10, maps to 0-5 bonus
+    complexity_bonus = min(5, complexity)
+    score += min(15, size_base + complexity_bonus)
 
     # 4. Known risk patterns (15%)
     risk_patterns = [
@@ -272,9 +285,35 @@ def cmd_compute_proximity(args):
     elif re.search(risk_patterns[1], command):
         score += 10
 
-    print(f"PROXIMITY={score}")
+    # 5. ⏱️ Timing metrics — Execution Emulation Factor (15%) (NEW)
+    eef = timing.get('execution_emulation_factor', 1.0)
+    timeout_prox = timing.get('timeout_proximity', 0)
+    rolling_avg = timing.get('rolling_avg_ms', 0)
+
+    # EEF contribution: floor at 0 (no negative scores for fast systems)
+    # map: 1.0→0, 1.5→5, 2.0→10, 2.5→13, 3.0→15
+    if eef > 1.0:
+        eef_score = min(15, int((eef - 1.0) * 10))
+    else:
+        eef_score = 0  # No penalty when system is running efficiently
+
+    # Timeout proximity adds bonus if it's high
+    if timeout_prox >= 80:
+        eef_score = min(15, eef_score + 5)  # penalty for high timeout risk
+    elif timeout_prox >= 60:
+        eef_score = min(15, eef_score + 3)
+
+    score += eef_score
+
+    # If EEF is extremely high, amplify the pattern match
+    if eef > 2.5 and max_weight > 0:
+        matched_pattern = f"{matched_pattern} [EEF={eef}]"
+
+    print(f"CRASH_PROXIMITY={score}")
     print(f"MATCHED_PATTERN={matched_pattern}")
     print(f"CONTEXT_USAGE={context_usage}")
+    print(f"EEF={eef}")
+    print(f"TIMEOUT_PROXIMITY={timeout_prox}")
 
 
 def cmd_read_checkpoint(args):
@@ -378,6 +417,21 @@ def cmd_generate_checkpoint(args):
     print(f"CHECKPOINT_SAVED session_id={sid} tool_calls={tool_calls} ctx={ctx_pct}%")
 
 
+def cmd_check_checkpoint(args):
+    """Check if checkpoint exists and print recovery info."""
+    cp = read_json(CHECKPOINT_FILE, {})
+    tools = cp.get('total_tool_calls', 0)
+    ctx = cp.get('context_usage_pct', 0)
+    cmd = cp.get('last_command', '')
+    if tools > 0 or ctx > 0 or cmd:
+        print(f'[Neural Safety] Session checkpoint found: {tools} tools, {ctx}% context')
+        if cmd:
+            print(f'[Neural Safety] Last command: {cmd[:60]}...')
+        print('[Neural Safety] Run: source /root/rehydration.md')
+    else:
+        print('[Neural Safety] No active checkpoint found')
+
+
 def cmd_read_failure_points(args):
     """Print top failure points."""
     fps = read_json(FAILURE_POINTS, {'failure_points': []})
@@ -400,6 +454,7 @@ def cmd_help(args):
     print("  compute_proximity <command> [file_scope]")
     print("  read_checkpoint")
     print("  generate_checkpoint")
+    print("  check_checkpoint")
     print("  read_failure_points")
     print("  help")
 
@@ -412,6 +467,7 @@ COMMANDS = {
     'compute_proximity': cmd_compute_proximity,
     'read_checkpoint': cmd_read_checkpoint,
     'generate_checkpoint': cmd_generate_checkpoint,
+    'check_checkpoint': cmd_check_checkpoint,
     'read_failure_points': cmd_read_failure_points,
     'help': cmd_help,
 }

@@ -37,6 +37,10 @@ info() { echo -e "  ${CYAN}ℹ️  $1${NC}"; }
 # ===================== DIAGNOSTIC CHECKS =====================
 
 CHECK_IDX=0
+PASS_COUNT=0
+WARN_COUNT=0
+FAIL_COUNT=0
+INFO_COUNT=0
 ISSUES=()
 RESULTS=""
 
@@ -45,6 +49,12 @@ record() {
     local status="$2"   # pass | warn | fail | info
     local detail="$3"
     CHECK_IDX=$((CHECK_IDX + 1))
+    case "$status" in
+        pass) PASS_COUNT=$((PASS_COUNT + 1)) ;;
+        warn) WARN_COUNT=$((WARN_COUNT + 1)) ;;
+        fail) FAIL_COUNT=$((FAIL_COUNT + 1)) ;;
+        info) INFO_COUNT=$((INFO_COUNT + 1)) ;;
+    esac
     RESULTS="${RESULTS}${CHECK_IDX}|${status}|${check}|${detail}\n"
 }
 
@@ -325,6 +335,154 @@ check_context_pressure() {
     fi
 }
 
+# ⏱️ ─── 14. Timing metrics engine (NEW) ────────────────────────────────────
+check_timing_engine() {
+    local check="Timing metrics engine — is timing_metrics.py functional?"
+
+    if [ ! -f "/root/NeuralCline/lib/timing_metrics.py" ]; then
+        record "$check" "fail" "timing_metrics.py missing"
+        return
+    fi
+
+    local result
+    result=$(timeout 5 python3 /root/NeuralCline/lib/timing_metrics.py help 2>&1)
+    if echo "$result" | grep -q "predict_timeout"; then
+        record "$check" "pass" "timing_metrics.py responds with all 5 commands"
+    else
+        record "$check" "fail" "timing_metrics.py not responding: $result"
+    fi
+}
+
+# ⏱️ ─── 15. Timing history file (NEW) ──────────────────────────────────────
+check_timing_history() {
+    local check="Timing history — is timing-history.json being tracked?"
+
+    local timing_file="/root/.session-state/timing-history.json"
+    if [ -f "$timing_file" ]; then
+        local entry_count
+        entry_count=$(python3 -c "import json; d=json.load(open('$timing_file')); print(len(d.get('entries', [])))" 2>/dev/null || echo "unknown")
+        local pattern_count
+        pattern_count=$(python3 -c "import json; d=json.load(open('$timing_file')); print(len(d.get('command_patterns', {})))" 2>/dev/null || echo "unknown")
+        local eef
+        eef=$(python3 -c "
+import json
+s=json.load(open('/root/.session-state/current-state.json'))
+t=s.get('timing_metrics',{})
+print(t.get('execution_emulation_factor','N/A'))
+" 2>/dev/null || echo "N/A")
+        record "$check" "pass" "Tracking $entry_count entries, $pattern_count patterns, EEF=$eef"
+    else
+        record "$check" "info" "timing-history.json not yet created — no timing data recorded"
+    fi
+}
+
+# ⏱️ ─── 16. Execution Emulation Factor health (NEW) ───────────────────────
+check_eef_health() {
+    local check="EEF health — is the Execution Emulation Factor within safe range?"
+
+    local eef
+    eef=$(python3 -c "
+import json
+s=json.load(open('/root/.session-state/current-state.json'))
+t=s.get('timing_metrics',{})
+eef=t.get('execution_emulation_factor', 1.0)
+print(eef)
+" 2>/dev/null || echo "1.0")
+
+    local timeout_prox
+    timeout_prox=$(python3 -c "
+import json
+s=json.load(open('/root/.session-state/current-state.json'))
+t=s.get('timing_metrics',{})
+prox=t.get('timeout_proximity', 0)
+print(prox)
+" 2>/dev/null || echo "0")
+
+    if [ "$(echo "$eef > 2.5" | bc -l 2>/dev/null)" = "1" ] 2>/dev/null; then
+        record "$check" "fail" "EEF=$eef (critical) — system is severely degraded. Timeout prox=$timeout_prox/100"
+    elif [ "$(echo "$eef > 1.8" | bc -l 2>/dev/null)" = "1" ] 2>/dev/null; then
+        record "$check" "warn" "EEF=$eef (elevated) — operations may be slow. Timeout prox=$timeout_prox/100"
+    elif [ "$(echo "$eef > 1.2" | bc -l 2>/dev/null)" = "1" ] 2>/dev/null; then
+        record "$check" "info" "EEF=$eef (moderate) — slight degradation"
+    else
+        record "$check" "pass" "EEF=$eef (normal) — timing environment healthy. Timeout prox=$timeout_prox/100"
+    fi
+}
+
+# ⏱️ ─── 17. Timeout proximity threshold (NEW) ──────────────────────────────
+check_timeout_proximity() {
+    local check="Timeout proximity — is the system at risk of shell integration timeouts?"
+
+    local timeout_prox
+    timeout_prox=$(python3 -c "
+import json
+s=json.load(open('/root/.session-state/current-state.json'))
+t=s.get('timing_metrics',{})
+prox=t.get('timeout_proximity', 0)
+print(prox)
+" 2>/dev/null || echo "0")
+
+    local rolling_avg
+    rolling_avg=$(python3 -c "
+import json
+s=json.load(open('/root/.session-state/current-state.json'))
+t=s.get('timing_metrics',{})
+avg=t.get('rolling_avg_ms', 0)
+print(avg)
+" 2>/dev/null || echo "0")
+
+    if [ "$timeout_prox" -ge 80 ] 2>/dev/null; then
+        record "$check" "fail" "Timeout proximity=$timeout_prox/100 (DANGER) — rolling avg=${rolling_avg}ms. Commands WILL time out!"
+    elif [ "$timeout_prox" -ge 60 ] 2>/dev/null; then
+        record "$check" "warn" "Timeout proximity=$timeout_prox/100 (WARNING) — rolling avg=${rolling_avg}ms. Commands may time out."
+    elif [ "$timeout_prox" -ge 40 ] 2>/dev/null; then
+        record "$check" "info" "Timeout proximity=$timeout_prox/100 — rolling avg=${rolling_avg}ms. Monitor execution."
+    else
+        record "$check" "pass" "Timeout proximity=$timeout_prox/100 — rolling avg=${rolling_avg}ms. Safe."
+    fi
+}
+
+# 🧬 ─── 18. Self-learning organism (NEW) ──────────────────────────────────
+check_self_learning() {
+    local check="Self-learning organism — is it alive and functional?"
+
+    if [ ! -f "/root/NeuralCline/lib/self_learning.py" ]; then
+        record "$check" "fail" "self_learning.py missing"
+        return
+    fi
+
+    local result
+    result=$(timeout 5 python3 /root/NeuralCline/lib/self_learning.py help 2>&1)
+    if echo "$result" | grep -q "foresee"; then
+        record "$check" "pass" "self_learning.py responds with all 6 commands"
+    else
+        record "$check" "fail" "self_learning.py not responding: $result"
+        return
+    fi
+}
+
+# 🧬 ─── 19. Session memory file (NEW) ─────────────────────────────────────
+check_session_memory() {
+    local check="Session memory — is session-memory.json being built?"
+
+    local mem_file="/root/.session-state/session-memory.json"
+    if [ -f "$mem_file" ]; then
+        local mem_count
+        mem_count=$(python3 -c "import json; d=json.load(open('$mem_file')); print(len(d.get('memories', [])))" 2>/dev/null || echo "0")
+        local pattern_count
+        pattern_count=$(python3 -c "import json; d=json.load(open('$mem_file')); print(len(d.get('learned_patterns', [])))" 2>/dev/null || echo "0")
+        local gen
+        gen=$(python3 -c "import json; d=json.load(open('$mem_file')); print(d.get('evolution',{}).get('generations',1))" 2>/dev/null || echo "1")
+        local healings
+        healings=$(python3 -c "import json; d=json.load(open('$mem_file')); print(len(d.get('self_healing_actions', [])))" 2>/dev/null || echo "0")
+        local org_id
+        org_id=$(python3 -c "import json; d=json.load(open('$mem_file')); print(d.get('organism_id','unknown'))" 2>/dev/null || echo "unknown")
+        record "$check" "pass" "Organism $org_id: Gen $gen, $mem_count memories, $pattern_count patterns, $healings healings"
+    else
+        record "$check" "info" "session-memory.json not yet created — organism is newborn"
+    fi
+}
+
 # ===================== RUN ALL CHECKS =====================
 
 check_state_freshness
@@ -340,14 +498,17 @@ check_shell_integration
 check_cline_config
 check_crash_patterns
 check_context_pressure
+check_timing_engine
+check_timing_history
+check_eef_health
+check_timeout_proximity
+check_self_learning
+check_session_memory
 
 # ===================== LOG THE DIAGNOSTIC =====================
 
-# Count issues by severity
-PASS_COUNT=$(echo -e "$RESULTS" | grep -c "|pass|" 2>/dev/null || echo 0)
-WARN_COUNT=$(echo -e "$RESULTS" | grep -c "|warn|" 2>/dev/null || echo 0)
-FAIL_COUNT=$(echo -e "$RESULTS" | grep -c "|fail|" 2>/dev/null || echo 0)
-INFO_COUNT=$(echo -e "$RESULTS" | grep -c "|info|" 2>/dev/null || echo 0)
+# Counters are maintained incrementally in the record() function above.
+# PASS_COUNT, WARN_COUNT, FAIL_COUNT, INFO_COUNT are already populated.
 
 # Write a structured diagnostic entry to crash-log.ndjson
 DIAG_ENTRY=$(python3 -c "
