@@ -27,11 +27,13 @@
 | Step | Description | Conservative | Stretch | Status |
 |------|-------------|-------------|---------|--------|
 | 2a | `install.sh` — one-command installer | 1 session | 1 session | ✅ **Done** |
-| 2b | `README.md` — hacker docs + screenshots | 1 session | 1 session | 🔲 |
-| 2c | GitHub repo setup (`EDGECASE/NeuralCline`) | 0.5 session | 0.5 session | 🔲 |
-| 2d | LICENSE (MIT core + commercial patches) | 0.5 session | — | 🔲 |
+| 2b | `README.md` — hacker docs (v1.0.1: 5 layers, 21 checks, timing, organism, hooks) | 1 session | 1 session | ✅ **Done** |
+| 2c | GitHub repo setup (`EDGECASE/NeuralCline`) | 0.5 session | 0.5 session | ✅ **Done** |
+| 2d | LICENSE (MIT core + commercial patches) | 0.5 session | — | ✅ **Done** |
 | 2e | Demo video + screenshots | 1 session | — | 🔲 |
 | *2f* | *Self-diagnostic (diagnose.sh + Protocol G)* | *0.5 session* | *0.5 session* | ✅ **Done** |
+| *2g* | *Shell hooks (auto hang/crash detection)* | *0.5 session* | *0.5 session* | ✅ **Done** |
+| *2h* | *Timing metrics + self-learning organism* | *1 session* | *0.5 session* | ✅ **Done** |
 
 ### Realistic window: **July 10-13** (conservative) / **July 10-11** (stretch)
 
@@ -110,7 +112,7 @@ Jul 31  ███████████  Phase 5 done (conservative)
 
 | Date | Milestone | Confidence |
 |------|-----------|-----------|
-| **July 13** | All packaging + live GitHub repo | 90% |
+| **July 13** | All packaging + live GitHub repo | **95%** |
 | **July 16** | First public launch (Reddit/HN) | 80% |
 | **July 20** | First dollar from Patch Pack | 60% |
 | **July 31** | Glitchware Library v1 | 40% |
