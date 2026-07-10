@@ -1,0 +1,8 @@
+# NeuralCline .gitignore
+# Session state is user-specific, not committed
+.session-state/
+node_modules/
+*.pyc
+__pycache__/
+.DS_Store
+*.backup
