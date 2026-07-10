@@ -214,3 +214,16 @@
     </div>
 </body>
 </html>
+
+<script>
+// Add pricing link to the links section
+document.addEventListener('DOMContentLoaded', function() {
+    var links = document.querySelector('.links');
+    if (links) {
+        var pricingLink = document.createElement('a');
+        pricingLink.href = 'pricing.html';
+        pricingLink.textContent = 'Pricing';
+        links.appendChild(pricingLink);
+    }
+});
+</script>

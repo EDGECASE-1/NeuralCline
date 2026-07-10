@@ -1,0 +1,52 @@
+name: 🆓 Free License Request
+description: Request a free Pro license for NeuralCline
+title: "[FREE LICENSE] Your Name / Organization"
+labels: ["free-license"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your interest in NeuralCline! Free Pro licenses are available for:
+        - Active Cline users who've experienced 3+ crashes in the last week
+        - Open-source contributors who want to help build the ecosystem
+        - Enterprise users who can provide feedback on deployment needs
+        
+  - type: input
+    id: name
+    attributes:
+      label: Your Name
+      description: What should we call you?
+      placeholder: "Jane Doe"
+    validations:
+      required: true
+      
+  - type: input
+    id: email
+    attributes:
+      label: Email
+      description: Where should we send the license?
+      placeholder: "jane@example.com"
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Which category applies to you?
+      options:
+        - Power user (3+ crashes/week)
+        - Open-source contributor
+        - Enterprise evaluator
+        - Other
+    validations:
+      required: true
+      
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why do you want a free license?
+      description: Tell us about your use case
+      placeholder: "I use Cline for X hours per day and have experienced Y crashes..."
+    validations:
+      required: true
