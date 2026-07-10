@@ -61,11 +61,31 @@ __neural_precmd() {
         echo "[NeuralCline] ⏱️  HANG DETECTED: Command '${cmd_short}' took ${duration_ms}ms (${exit_code})" >&2
     fi
 
-    # ── Detect crash (exit code != 0) ──
+    # ── Detect crash (exit code != 0) with bicameral noise suppression ──
     local crash_detected=0
+    local suppress_crash=0
+    local noise_patterns=("__vsc_original_prompt_command" "__vsc_prompt_cmd_original" "__vsc_preexec_all" "PROMPT_COMMAND" "cd /root/NeuralCline" "cd /root/NeuralCline/hype-engine" "cd /root/NeuralCline/presence-engine" "source /root" "ls --color" "cat " "diagnose.sh" "tail -" "generate-handoff.sh" "read_file" "grep --color" "timeout " "write_crash_log" "compute_proximity" "predict_timeout" "wc -l " "rm ")
     if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 130 ] && [ "$exit_code" -ne 141 ]; then
-        crash_detected=1
-        echo "[NeuralCline] 🛑 CRASH DETECTED: Command '${cmd_short}' exited with code ${exit_code}" >&2
+        # Check noise patterns first (fast, no I/O)
+        for pattern in "${noise_patterns[@]}"; do
+            if [[ "$cmd_short" == *"$pattern"* ]]; then
+                suppress_crash=1
+                break
+            fi
+        done
+        # If not a known noise pattern, check bicameral correction (lightweight file read)
+        if [ "$suppress_crash" -eq 0 ] && [ -f "$SESSION_DIR/session-memory.json" ]; then
+            local adjust
+            adjust=$(grep -o '"adjustment"[[:space:]]*:[[:space:]]*"[^"]*"' "$SESSION_DIR/session-memory.json" 2>/dev/null | tail -1 | cut -d'"' -f4)
+            if [ "$adjust" = "relax_crash_threshold" ]; then
+                suppress_crash=1
+            fi
+        fi
+        # Only print if not suppressed
+        if [ "$suppress_crash" -eq 0 ]; then
+            crash_detected=1
+            echo "[NeuralCline] 🛑 CRASH DETECTED: Command '${cmd_short}' exited with code ${exit_code}" >&2
+        fi
     fi
 
     # ── Log to timing-history.json ──
