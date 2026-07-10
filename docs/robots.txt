@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Sitemap: https://edgecase-1.github.io/NeuralCline/sitemap.xml
+Sitemap: https://edgecase-1.github.io/NeuralCline/news-sitemap.xml
+
+# Googlebot News
+User-agent: Googlebot-News
+Allow: /
+
+# Googlebot Image
+User-agent: Googlebot-Image
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.svg

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>NeuralCline</title>
+    <link>https://edgecase-1.github.io/NeuralCline/</link>
+    <description>Session safety layer for AI coding agents</description>
+    <language>en</language>
+    <lastBuildDate>2026-07-10</lastBuildDate>
+    <atom:link href="https://edgecase-1.github.io/NeuralCline/feed.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>NeuralCline v1.0.1 Launch — Session Safety Layer</title>
+      <link>https://edgecase-1.github.io/NeuralCline/blog.html</link>
+      <description>NeuralCline is now live on GitHub! Five layers of crash protection, 21-point diagnostic, timing intelligence, and self-learning organism.</description>
+      <pubDate>Tue, 10 Jul 2026 00:00:00 GMT</pubDate>
+      <guid>https://edgecase-1.github.io/NeuralCline/blog.html</guid>
+    </item>
+    <item>
+      <title>NeuralCline: The Architecture Behind the Session Safety Layer</title>
+      <link>https://github.com/EDGECASE-1/NeuralCline</link>
+      <description>How we solved the Cline session crash problem at the architectural level: three compute engines, five safety layers, and automatic shell-level hang detection.</description>
+      <pubDate>Tue, 10 Jul 2026 00:00:00 GMT</pubDate>
+      <guid>https://github.com/EDGECASE-1/NeuralCline</guid>
+    </item>
+  </channel>
+</rss>
