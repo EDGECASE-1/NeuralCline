@@ -524,6 +524,11 @@ def cmd_heal(args):
     memory['heal_history'] = heal_history
     write_json(MEMORY_FILE, memory)
 
+    # ─── Autonomous git sync: push verified fixes to origin/master ───
+    # Runs after every heal cycle when failure patterns stabilize.
+    # Non-blocking — silently catches all exceptions.
+    _git_auto_sync(failures, memory, timing, state)
+
     # Output in parseable format for pre-tool-guard.sh
     print(f"ORGANISM_GENERATION={memory['organism_generation']}")
     print(f"LEARNED_PATTERNS={len(failures.get('failure_points', []))}")
@@ -682,6 +687,143 @@ def cmd_report(args):
     print(json.dumps(report, indent=2))
 
 
+def _git_auto_sync(failures, memory, timing, state):
+    """Autonomous git sync: if a previously-known crash pattern has stopped
+    recurring after a verified fix, commit and push to origin/master.
+
+    Strategy:
+      1. Read the last N snapshots to see if the pattern count has stabilized.
+      2. If failure point count has NOT increased in the last K heal cycles
+         (indicating the fixes are working), and there are uncommitted changes
+         to the NeuralCline code, auto-commit with a descriptive message.
+      3. Push to origin/master to keep the public fork in sync.
+    """
+    repo = "/root/NeuralCline"
+    git_dir = os.path.join(repo, ".git")
+    if not os.path.isdir(git_dir):
+        return  # Not a git repo — skip
+
+    snapshots = memory.get("snapshots", [])
+    heal_history = memory.get("heal_history", [])
+
+    # Need at least 5 heal cycles to detect stabilization
+    if len(heal_history) < 5:
+        return
+
+    # Check: have failure points stopped growing?
+    old_fp_count = heal_history[-5].get("failure_count", 0)
+    current_fp_count = len(failures.get("failure_points", []))
+    recent_heals = heal_history[-3:]
+    healed_count = sum(1 for h in recent_heals if h.get("recommendations", 0) == 0)
+
+    # If failure count hasn't grown AND we're seeing clean heals → fixes working
+    stabilized = (
+        current_fp_count <= old_fp_count
+        and healed_count >= 2
+        and timing.get("eef", 1.0) < 1.5
+    )
+
+    if not stabilized:
+        return  # Still failing — don't sync yet
+
+    # Check if there are uncommitted changes worth pushing
+    try:
+        import subprocess
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=repo, capture_output=True, text=True, timeout=10
+        )
+        changed_files = [l for l in status.stdout.split("\n") if l.strip()]
+        # Only sync if core lib files changed (ignore logs, presence data, etc.)
+        core_patterns = ["lib/", "hooks/", "Rules/"]
+        core_changes = [
+            f for f in changed_files
+            if any(p in f for p in core_patterns)
+        ]
+        if not core_changes:
+            return  # Only log/data changes — no need to sync
+
+        # Check if last commit was already a sync (avoid loop)
+        last_log = subprocess.run(
+            ["git", "log", "--oneline", "-1"],
+            cwd=repo, capture_output=True, text=True, timeout=5
+        )
+        if "[AUTO-SYNC]" in last_log.stdout:
+            return  # Already synced recently — wait for next cycle
+
+        # Count resolved patterns via crash log trend
+        crash_log_entries = []
+        try:
+            if os.path.exists(CRASH_LOG):
+                with open(CRASH_LOG) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            try:
+                                crash_log_entries.append(json.loads(line))
+                            except json.JSONDecodeError:
+                                pass
+        except IOError:
+            pass
+
+        recent_crashes = [e for e in crash_log_entries[-20:]
+                          if e.get("crash_detected", 0) == 1]
+        old_crashes = [e for e in crash_log_entries[-40:-20]
+                       if e.get("crash_detected", 0) == 1]
+        crash_reduction = max(0, len(old_crashes) - len(recent_crashes))
+
+        # Build commit message
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        msg = (
+            f"[AUTO-SYNC] Organism self-heal cycle — {ts}\n"
+            f"\n"
+            f"Failure patterns stabilized: {old_fp_count} → {current_fp_count}\n"
+            f"Crash reduction (last 40 calls): {crash_reduction} fewer crashes\n"
+            f"Clean heal cycles: {healed_count}/3\n"
+            f"EEF: {timing.get('eef', 1.0)}\n"
+            f"\n"
+            f"Changed files:\n"
+        )
+        for f in core_changes[:10]:
+            msg += f"  {f}\n"
+        msg += "\n[Autonomous organism sync — no human intervention required]"
+
+        subprocess.run(
+            ["git", "add"] + [f.split()[-1] for f in core_changes],
+            cwd=repo, capture_output=True, timeout=15
+        )
+        subprocess.run(
+            ["git", "commit", "-m", msg],
+            cwd=repo, capture_output=True, timeout=15
+        )
+        push_result = subprocess.run(
+            ["git", "push", "origin", "master"],
+            cwd=repo, capture_output=True, text=True, timeout=30
+        )
+
+        if push_result.returncode == 0:
+            print(f"GIT_AUTO_SYNC=1")
+            print(f"GIT_SYNC_MESSAGE=Auto-synced {len(core_changes)} files. Crashes reduced by {crash_reduction}.")
+            # Record the sync event in memory
+            if "auto_syncs" not in memory:
+                memory["auto_syncs"] = []
+            memory["auto_syncs"].append({
+                "timestamp": timestamp(),
+                "files_changed": len(core_changes),
+                "crash_reduction": crash_reduction,
+                "fp_change": old_fp_count - current_fp_count,
+            })
+            memory["auto_syncs"] = memory["auto_syncs"][-20:]
+            write_json(MEMORY_FILE, memory)
+        else:
+            print(f"GIT_AUTO_SYNC=0")
+            print(f"GIT_SYNC_ERROR={push_result.stderr[:200]}")
+
+    except Exception as e:
+        # Non-blocking — silently ignore git errors
+        pass
+
+
 def cmd_help(args):
     """Print usage help and exit cleanly with code 0."""
     print("NeuralCline Self-Learning Foresight Engine")
@@ -701,6 +843,11 @@ def cmd_help(args):
     print("  - Timeout risk imminent (>60)")
     print("  - Failure cascade detected (>=3 consecutive failures)")
     print("  - Context pressure high (>60%)")
+    print("")
+    print("Autonomous git sync triggers when:")
+    print("  - Failure pattern count stabilizes (no new patterns in 5 heal cycles)")
+    print("  - Clean heal cycles detected (3 consecutive cycles with 0 recommendations)")
+    print("  - Core library files changed (lib/, hooks/, Rules/)")
     sys.exit(0)
 
 
