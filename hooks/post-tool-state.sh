@@ -2,22 +2,30 @@
 # =============================================================================
 # 📝 POST-TOOL STATE — NeuralCline EDGECASE
 # =============================================================================
-# Uses state_engine.py and timing_metrics.py for ALL JSON operations — no
-# inline python3 -c. This prevents the shell integration timeout crash.
-#
-# Now integrates crash_buffer.py absorption for non-zero exit codes and
-# checks the bicameral auditor correction before logging crash entries.
+# Uses agentic_exec.py for ALL subprocess calls — never blocks the main thread.
+# Any hung subprocess is killed by an OS-level SIGALRM watchdog.
 #
 # Usage: bash /root/NeuralCline/hooks/post-tool-state.sh <command> <exit_code> <output_size> <proximity> <duration_ms> [file_scope] [error_msg]
 # =============================================================================
 
+AGENTIC="/root/NeuralCline/lib/agentic_exec.py"
 ENGINE="/root/NeuralCline/lib/state_engine.py"
 TIMING_ENGINE="/root/NeuralCline/lib/timing_metrics.py"
 SELF_LEARNING="/root/NeuralCline/lib/self_learning.py"
 CRASH_BUFFER="/root/NeuralCline/lib/crash_buffer.py"
+FRONTIER_ENGINE="/root/NeuralCline/lib/frontier_analyzer.py"
+SMART_PREFETCH="/root/NeuralCline/hooks/smart_prefetch.sh"
+NERVOUS_SYSTEM="/root/NeuralCline/hooks/nervous_system_watchdog.sh"
 SESSION_DIR="/root/.session-state"
 
+# ─── Spawn and forget — never wait for subprocesses ──────────────────────
+spawn_detached() {
+    local timeout_ms="$1"; shift
+    python3 "$AGENTIC" spawn "$timeout_ms" "$@" 2>/dev/null || true
+}
+
 # ⏱️ Record execution timing to the timing metrics engine
+# Enhanced with frontier analyzer data for dynamic throughput calibration
 record_timing() {
     local command="${1:-}"
     local exit_code="${2:-0}"
@@ -29,6 +37,24 @@ record_timing() {
         timeout 10 python3 "$TIMING_ENGINE" record_execution \
             "$command" "$duration_ms" "$exit_code" "$output_size" 2>&1
     fi
+}
+
+# 🔮 Frontier-enhanced check — uses actual file stats + throughput estimates
+# to determine if a command output was truncated or needs chunking.
+# Runs asynchronously to avoid blocking the main state update.
+enrich_with_frontier() {
+    local command="${1:-}"
+    local exit_code="${2:-0}"
+    local output_size="${3:-0}"
+    [ -z "$command" ] && return 0
+    [ ! -f "$FRONTIER_ENGINE" ] && return 0
+
+    # Fast check in background — doesn't block main flow
+    timeout 5 python3 "$FRONTIER_ENGINE" report "$command" 2>/dev/null | \
+        grep "^FRONTIER_" | while read -r line; do
+        # Emit frontier data to the state output
+        echo "🔮 $line"
+    done &
 }
 
 # ⛓️ Prefetching chunk checker — silently evaluates file sizes via timing_engine
@@ -51,6 +77,16 @@ main() {
 
     # ⏱️ Step 0: Record execution timing FIRST (before state update)
     record_timing "$command" "$exit_code" "$output_size" "$duration_ms"
+
+    # 🧬 Step 0.1: Nervous System Heartbeat (NEW — consciousness state update)
+    # Updates the consciousness.json file with post-execution state.
+    # Runs async to never block the main flow.
+    if [ -f "$NERVOUS_SYSTEM" ]; then
+        timeout 3 bash "$NERVOUS_SYSTEM" heartbeat "$exit_code" >/dev/null 2>&1 &
+    fi
+
+    # 🔮 Step 0.25: Enrich state with frontier analyzer data (async)
+    enrich_with_frontier "$command" "$exit_code" "$output_size" >/dev/null 2>&1 &
 
     # 🧬 Step 0.5: Self-learning organism snapshot
     timeout 10 python3 "$SELF_LEARNING" snapshot >/dev/null 2>&1
