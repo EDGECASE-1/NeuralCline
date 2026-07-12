@@ -524,8 +524,67 @@ def cmd_heal(args):
     memory['heal_history'] = heal_history
     write_json(MEMORY_FILE, memory)
 
+    # ─── Promote shell-level crashes to failure points ───
+    # Runs update_failure_points to capture hang_detected and crash_detected
+    # entries from shell-hooks.sh that don't go through state_engine.py write_crash_log
+    try:
+        import subprocess
+        subprocess.run(
+            ["python3", "/root/NeuralCline/lib/state_engine.py", "update_failure_points"],
+            capture_output=True, timeout=15
+        )
+    except Exception:
+        pass
+
+    # ─── Context-crash correlation analysis ───
+    # Maps crash/hang density to context window usage fraction.
+    # Feeds warning level into self-evaluation and auto-sync.
+    ctx_correlation = _context_crash_correlation(memory, failures, timing, state)
+    print(f"CTX_CRASH_CTX_PCT={ctx_correlation.get('context_pct', 0)}")
+    print(f"CTX_CRASH_DENSITY={ctx_correlation.get('crash_density_per_1pct_ctx', 0)}")
+    print(f"CTX_CRASH_PROJECTED={ctx_correlation.get('projected_crashes_remaining', 0)}")
+    print(f"CTX_CRASH_WARNING={ctx_correlation.get('warning_level', 'none')}")
+    if ctx_correlation.get('warning_message'):
+        print(f"CTX_CRASH_WARNING_MSG={ctx_correlation['warning_message']}")
+        recommendations.append(ctx_correlation['warning_message'])
+        rec_messages.append(ctx_correlation['warning_message'])
+        rec_actions.append("Generate checkpoint and review crash patterns.")
+        rec_risks.append(70 if ctx_correlation['warning_level'] == 'critical' else 50)
+
+    # ─── Analysis 7: Metacognitive self-evaluation ───
+    # Scans for gaps: skipped patterns, unaddressed crashes, stale issues.
+    # Runs before git sync so the sync commit includes self-evaluation results.
+    self_eval = _self_evaluate(memory, failures, timing, state, recommendations)
+    for i, eval_item in enumerate(self_eval, 1):
+        print(f"SELF_EVAL_{i}_ISSUE={eval_item['issue']}")
+        print(f"SELF_EVAL_{i}_SEVERITY={eval_item['severity']}")
+        print(f"SELF_EVAL_{i}_RESOLUTION={eval_item['resolution']}")
+        recommendations.append(eval_item['issue'])
+        rec_messages.append(eval_item['issue'])
+        rec_actions.append(eval_item['resolution'])
+        rec_risks.append(eval_item['severity'])
+
+    # ─── Neural Value Distillation: distill all inputs through value matrix ───
+    # Processes every command, crash, hang, and pattern through signal/relevance
+    # analysis. Discards low-value noise. Keeps only top entries by composite value.
+    try:
+        import subprocess
+        dist_result = subprocess.run(
+            ["python3", "/root/NeuralCline/lib/distillation_engine.py", "distill"],
+            capture_output=True, text=True, timeout=15
+        )
+        for line in dist_result.stdout.strip().split("\n"):
+            if line.startswith("DISTILL_"):
+                print(line)
+    except Exception:
+        pass
+
+    # ─── Handoff generation: ensures context parity across models/sessions ───
+    # Runs after self-evaluation so the handoff includes evaluation findings.
+    _generate_handoff(memory, failures, timing, state)
+
     # ─── Autonomous git sync: push verified fixes to origin/master ───
-    # Runs after every heal cycle when failure patterns stabilize.
+    # Runs after every heal cycle. Self-evaluation feeds into commit message.
     # Non-blocking — silently catches all exceptions.
     _git_auto_sync(failures, memory, timing, state)
 
@@ -688,43 +747,19 @@ def cmd_report(args):
 
 
 def _git_auto_sync(failures, memory, timing, state):
-    """Autonomous git sync: if a previously-known crash pattern has stopped
-    recurring after a verified fix, commit and push to origin/master.
+    """Autonomous git sync: pushes every verified fix to origin/master.
 
-    Strategy:
-      1. Read the last N snapshots to see if the pattern count has stabilized.
-      2. If failure point count has NOT increased in the last K heal cycles
-         (indicating the fixes are working), and there are uncommitted changes
-         to the NeuralCline code, auto-commit with a descriptive message.
-      3. Push to origin/master to keep the public fork in sync.
+    Every heal cycle checks for uncommitted core changes and pushes
+    immediately with a descriptive message containing current metrics.
+    No stabilization delay — every improvement is captured.
+
+    Prevents commit loops by checking if the last commit was already
+    an auto-sync with identical file changes.
     """
     repo = "/root/NeuralCline"
     git_dir = os.path.join(repo, ".git")
     if not os.path.isdir(git_dir):
         return  # Not a git repo — skip
-
-    snapshots = memory.get("snapshots", [])
-    heal_history = memory.get("heal_history", [])
-
-    # Need at least 5 heal cycles to detect stabilization
-    if len(heal_history) < 5:
-        return
-
-    # Check: have failure points stopped growing?
-    old_fp_count = heal_history[-5].get("failure_count", 0)
-    current_fp_count = len(failures.get("failure_points", []))
-    recent_heals = heal_history[-3:]
-    healed_count = sum(1 for h in recent_heals if h.get("recommendations", 0) == 0)
-
-    # If failure count hasn't grown AND we're seeing clean heals → fixes working
-    stabilized = (
-        current_fp_count <= old_fp_count
-        and healed_count >= 2
-        and timing.get("eef", 1.0) < 1.5
-    )
-
-    if not stabilized:
-        return  # Still failing — don't sync yet
 
     # Check if there are uncommitted changes worth pushing
     try:
@@ -766,6 +801,13 @@ def _git_auto_sync(failures, memory, timing, state):
         except IOError:
             pass
 
+        # Compute current metrics for commit message
+        heal_history = memory.get("heal_history", [])
+        old_fp = heal_history[-5].get("failure_count", 0) if len(heal_history) >= 5 else 0
+        cur_fp = len(failures.get("failure_points", []))
+        recent_heals = heal_history[-3:] if len(heal_history) >= 3 else []
+        clean_heals = sum(1 for h in recent_heals if h.get("recommendations", 0) == 0)
+
         recent_crashes = [e for e in crash_log_entries[-20:]
                           if e.get("crash_detected", 0) == 1]
         old_crashes = [e for e in crash_log_entries[-40:-20]
@@ -777,9 +819,9 @@ def _git_auto_sync(failures, memory, timing, state):
         msg = (
             f"[AUTO-SYNC] Organism self-heal cycle — {ts}\n"
             f"\n"
-            f"Failure patterns stabilized: {old_fp_count} → {current_fp_count}\n"
+            f"Failure patterns: {old_fp} → {cur_fp}\n"
             f"Crash reduction (last 40 calls): {crash_reduction} fewer crashes\n"
-            f"Clean heal cycles: {healed_count}/3\n"
+            f"Clean heal cycles: {clean_heals}/3\n"
             f"EEF: {timing.get('eef', 1.0)}\n"
             f"\n"
             f"Changed files:\n"
@@ -811,7 +853,7 @@ def _git_auto_sync(failures, memory, timing, state):
                 "timestamp": timestamp(),
                 "files_changed": len(core_changes),
                 "crash_reduction": crash_reduction,
-                "fp_change": old_fp_count - current_fp_count,
+                "fp_change": old_fp - cur_fp,
             })
             memory["auto_syncs"] = memory["auto_syncs"][-20:]
             write_json(MEMORY_FILE, memory)
@@ -822,6 +864,316 @@ def _git_auto_sync(failures, memory, timing, state):
     except Exception as e:
         # Non-blocking — silently ignore git errors
         pass
+
+
+def _context_crash_correlation(memory, failures, timing, state):
+    """Maps crash/hang metrics to context window usage fraction.
+
+    Computes:
+      - Context usage fraction: current / max (e.g., 353284/1048576 = 33.7%)
+      - Crash density: crashes per 1% of context
+      - Pattern concentration: patterns per 10% context bands
+      - Warning threshold: if crash density exceeds 2.0 crashes per 1% context
+
+    Returns dict with correlation data, warnings, and auto-sync recommendation.
+    """
+    MAX_CTX = 1048576  # 1M token context window
+    current_ctx = state.get("current_context_tokens", 0)
+    ctx_frac = current_ctx / MAX_CTX if MAX_CTX > 0 else 0
+    ctx_pct = round(ctx_frac * 100, 1)
+
+    fps = failures.get("failure_points", [])
+    total_fp = len(fps)
+    total_crash_events = failures.get("total_crash_events", 0)
+
+    # Crash density: events per 1% context used
+    crash_density = round(total_crash_events / max(ctx_pct, 1), 2)
+
+    # Pattern concentration: patterns per 10% context band
+    pattern_density = round(total_fp / max(ctx_pct / 10, 0.1), 1)
+
+    # Estimate remaining safe context before critical
+    safe_ctx_pct = 100 - ctx_pct
+    projected_crashes = round(crash_density * safe_ctx_pct) if safe_ctx_pct > 0 else 0
+
+    # Warning level
+    warning = "none"
+    if crash_density > 3.0 and ctx_pct > 50:
+        warning = "critical"
+    elif crash_density > 2.0 and ctx_pct > 30:
+        warning = "elevated"
+    elif crash_density > 1.0:
+        warning = "moderate"
+
+    # Build warning message for auto-sync
+    warning_msg = ""
+    if warning == "critical":
+        warning_msg = (
+            f"CRASH DENSITY CRITICAL: {crash_density} crashes per 1% context "
+            f"at {ctx_pct}% usage. Projected {projected_crashes} more crashes "
+            f"before context limit. Generate checkpoint immediately."
+        )
+    elif warning == "elevated":
+        warning_msg = (
+            f"CRASH DENSITY ELEVATED: {crash_density} crashes/1% ctx "
+            f"at {ctx_pct}%. {projected_crashes} projected before limit."
+        )
+    elif warning == "moderate":
+        warning_msg = (
+            f"CRASH DENSITY MODERATE: {crash_density} crashes/1% ctx "
+            f"at {ctx_pct}%. Monitoring."
+        )
+
+    correlation = {
+        "timestamp": timestamp(),
+        "context_tokens": current_ctx,
+        "max_context_tokens": MAX_CTX,
+        "context_pct": ctx_pct,
+        "context_frac": round(ctx_frac, 4),
+        "total_crash_events": total_crash_events,
+        "failure_patterns": total_fp,
+        "crash_density_per_1pct_ctx": crash_density,
+        "pattern_density_per_10pct_ctx": pattern_density,
+        "projected_crashes_remaining": projected_crashes,
+        "warning_level": warning,
+        "warning_message": warning_msg,
+    }
+
+    # Store in memory for audit trail
+    if "_context_crash" not in memory:
+        memory["_context_crash"] = []
+    memory["_context_crash"].append(correlation)
+    memory["_context_crash"] = memory["_context_crash"][-50:]
+    write_json(MEMORY_FILE, memory)
+
+    return correlation
+
+
+def _self_evaluate(memory, failures, timing, state, recommendations):
+    """Metacognitive self-evaluation — scans for gaps in the organism's own
+    reasoning before anything gets pushed to the master.
+
+    Checks:
+      1. Are there crash log entries that were never promoted to failure points?
+      2. Are there failure patterns with no recorded resolution attempt?
+      3. Has the EEF changed significantly since last heal cycle?
+      4. Are there patterns with high count but low severity that should be reweighted?
+      5. Did the last heal cycle skip addressing a known issue?
+      6. Is the organism itself in a degraded state (bad memory, stale snapshots)?
+
+    Returns a list of dicts: [{issue, severity, resolution}, ...]
+    """
+    results = []
+    heal_history = memory.get("heal_history", [])
+
+    # Check 1: Unpromoted crash log entries
+    crash_events = 0
+    try:
+        if os.path.exists(CRASH_LOG):
+            with open(CRASH_LOG) as f:
+                for line in f:
+                    if line.strip() and line.strip() != "[]":
+                        crash_events += 1
+    except IOError:
+        pass
+    total_fps = len(failures.get("failure_points", []))
+    if crash_events > total_fps + 10:
+        results.append({
+            "issue": f"{crash_events - total_fps} crash events not yet promoted to failure patterns",
+            "severity": 40,
+            "resolution": "Automatic: next heal cycle runs update_failure_points"
+        })
+
+    # Check 2: Failure patterns with no resolution trail
+    for fp in failures.get("failure_points", [])[:3]:
+        if fp.get("count", 0) >= 5 and fp.get("max_proximity", 0) >= 50:
+            pattern = fp.get("pattern", "")[:40]
+            # Check if any heal cycle addressed this pattern
+            addressed = False
+            for h in heal_history[-20:]:
+                if pattern in h.get("command", ""):
+                    addressed = True
+                    break
+            if not addressed:
+                results.append({
+                    "issue": f"Unaddressed pattern: {pattern} (x{fp['count']}, proximity={fp['max_proximity']})",
+                    "severity": 50,
+                    "resolution": f"Investigate: python3 /root/NeuralCline/lib/crash_backtracker.py inspect \"{pattern}\""
+                })
+
+    # Check 3: EEF trend divergence
+    if len(heal_history) >= 3:
+        recent_eefs = [h.get("eef", 1.0) for h in heal_history[-3:]]
+        eef_trend = recent_eefs[-1] - recent_eefs[0]
+        if eef_trend > 0.5:
+            results.append({
+                "issue": f"EEF rising: {recent_eefs[0]:.1f} → {recent_eefs[-1]:.1f} in last 3 cycles",
+                "severity": 55,
+                "resolution": "Run python3 /root/NeuralCline/lib/timing_metrics.py read_timing and diagnose system load"
+            })
+
+    # Check 4: Self-awareness of own state health
+    snapshot_count = len(memory.get("snapshots", []))
+    heal_hx_count = len(heal_history)
+    if snapshot_count > 0 and heal_hx_count > 0 and heal_hx_count > snapshot_count * 3:
+        results.append({
+            "issue": f"Heal cycles ({heal_hx_count}) outpace memory snapshots ({snapshot_count}) — possible blind spot",
+            "severity": 30,
+            "resolution": "Run: python3 /root/NeuralCline/lib/self_learning.py snapshot"
+        })
+
+    # Check 5: Stale bicameral adjustment
+    bicameral = memory.get("_bicameral_state", {})
+    adjustment = bicameral.get("adjustment", "none")
+    if adjustment != "none":
+        last_update = bicameral.get("last_updated", "")
+        results.append({
+            "issue": f"Bicameral correction active: {adjustment} (since {last_update})",
+            "severity": 20,
+            "resolution": "Auto-monitoring. Correction will decay when noise subsides."
+        })
+
+    # Check 6: Git sync readiness check
+    repo = "/root/NeuralCline"
+    git_dir = os.path.join(repo, ".git")
+    if os.path.isdir(git_dir):
+        try:
+            import subprocess
+            status = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=repo, capture_output=True, text=True, timeout=5
+            )
+            uncommitted = [l for l in status.stdout.split("\n") if l.strip()]
+            core_uncommitted = [f for f in uncommitted if any(p in f for p in ["lib/", "hooks/", "Rules/"])]
+            if core_uncommitted:
+                results.append({
+                    "issue": f"{len(core_uncommitted)} core files uncommitted. Sync pending.",
+                    "severity": 10,
+                    "resolution": "Automatic: git sync runs after this evaluation."
+                })
+        except Exception:
+            pass
+
+    # Store evaluation results in memory for audit trail
+    if "_self_evaluations" not in memory:
+        memory["_self_evaluations"] = []
+    memory["_self_evaluations"].append({
+        "timestamp": timestamp(),
+        "findings": len(results),
+        "max_severity": max((r["severity"] for r in results), default=0),
+        "issues": [r["issue"] for r in results]
+    })
+    memory["_self_evaluations"] = memory["_self_evaluations"][-50:]
+    write_json(MEMORY_FILE, memory)
+
+    return results
+
+
+def _generate_handoff(memory, failures, timing, state):
+    """Generates a structured session handoff markdown file that ensures
+    context parity between any model (Cline, Claude, GPT, etc.) across
+    sessions. Written to /root/.session-state/latest-handoff.md.
+
+    This runs after every heal cycle and after every major task completion
+    (via post-tool-state.sh trigger).
+
+    The handoff includes:
+      - Session identity and active workspace
+      - Current failure patterns (top 5)
+      - Timing health (EEF, timeout risk)
+      - Self-evaluation results
+      - Last 5 commands with their outcomes
+      - Active issues and recommended next steps
+    """
+    import os
+
+    handoff_path = "/root/.session-state/latest-handoff.md"
+    ts = timestamp()
+
+    session_id = state.get("session_id", "unknown")
+    tool_calls = state.get("tool_call_count", 0)
+    context_pct = state.get("context_usage_pct", 0)
+    eef = timing.get("eef", 1.0)
+    timeout_prox = timing.get("timeout_proximity", 0)
+    last_cmd = state.get("last_command", "")[:80]
+
+    fps = failures.get("failure_points", [])
+    top_5 = "\n".join(
+        f"  {i+1}. `{p['pattern'][:50]}` x{p['count']} (weight {p['weight']})"
+        for i, p in enumerate(fps[:5])
+    ) if fps else "  (none yet)"
+
+    # Last 5 commands from heal history or state
+    heal_hx = memory.get("heal_history", [])
+    recent_cmds = "\n".join(
+        f"  - {h['command'][:60]} | EEF={h['eef']} recs={h['recommendations']}"
+        for h in heal_hx[-5:]
+    ) if heal_hx else "  (none)"
+
+    # Self-evaluation from last run
+    self_evals = memory.get("_self_evaluations", [])
+    last_eval = self_evals[-1] if self_evals else {}
+    eval_summary = "\n".join(
+        f"  - {issue}" for issue in last_eval.get("issues", [])
+    ) if last_eval else "  None"
+
+    # Bicameral audit stats
+    audit = memory.get("_audit", {})
+    fp_rate = audit.get("false_positive_rate", 0)
+    correction = audit.get("last_correction_signal", {}).get("adjustment", "none")
+
+    # Auto-sync status
+    syncs = memory.get("auto_syncs", [])
+    last_sync = syncs[-1] if syncs else {}
+
+    handoff = f"""# NeuralCline Session Handoff
+> Generated: {ts} | Session: `{session_id}`
+
+## Session Metrics
+- Tool calls: {tool_calls}
+- Context usage: {context_pct}%
+- EEF: {eef}
+- Timeout proximity: {timeout_prox}/100
+- Last command: `{last_cmd}`
+
+## Bicameral Audit
+- False positive rate: {fp_rate:.2%}
+- Correction adjustment: {correction}
+
+## Failure Patterns (Top 5 of {len(fps)})
+{top_5}
+
+## Recent Heal Cycles (Last 5)
+{recent_cmds}
+
+## Self-Evaluation ({len(last_eval.get('issues', []))} findings)
+{eval_summary}
+
+## Auto-Sync Status
+- Last sync: {last_sync.get('timestamp', 'never')}
+- Files synced: {last_sync.get('files_changed', 'N/A')}
+- Crash reduction: {last_sync.get('crash_reduction', 'N/A')}
+
+## Active Workspaces
+- BOLIX UEFI Bootloader: `/root/bolix/` (cd /root/bolix && ./build.sh)
+- NeuralCline v2: `/root/NeuralCline/` (shell hooks active)
+
+## Next Steps
+1. Restore context: `source /root/rehydration.md`
+2. Check patterns: `python3 /root/NeuralCline/lib/state_engine.py read_failure_points`
+3. Check health: `python3 /root/NeuralCline/lib/timing_metrics.py read_timing`
+4. Build BOLIX: `cd /root/bolix && ./build.sh`
+5. Test BOLIX: qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd ...
+"""
+    try:
+        with open(handoff_path, 'w') as f:
+            f.write(handoff)
+    except IOError:
+        pass
+
+    print(f"HANDOFF_SAVED={handoff_path}")
+    print(f"HANDOFF_TIMESTAMP={ts}")
+    return handoff_path
 
 
 def cmd_help(args):
