@@ -17,6 +17,7 @@ FRONTIER_ENGINE="/root/NeuralCline/lib/frontier_analyzer.py"
 SMART_PREFETCH="/root/NeuralCline/hooks/smart_prefetch.sh"
 NERVOUS_SYSTEM="/root/NeuralCline/hooks/nervous_system_watchdog.sh"
 CACHE_SCANNER="/root/NeuralCline/hooks/cache_saturation_scanner.sh"
+BALANCE_ORCHESTRATOR="/root/NeuralCline/lib/balance_orchestrator.py"
 SESSION_DIR="/root/.session-state"
 
 # ─── Spawn and forget — never wait for subprocesses ──────────────────────
@@ -96,6 +97,11 @@ main() {
     # Runs in < 100ms typical, detects stale task dirs, crash log bloat,
     # hook latency cascading, and context saturation. Auto-cleans if needed.
     timeout 5 bash "$CACHE_SCANNER" >/dev/null 2>&1 &
+
+    # ⚖️ Step 0.7: Balance orchestrator (async — Python, self-preservation safe)
+    # Central homeostatic loop: feeds all modules into bicameral logic,
+    # updates context coordinates, prunes external bloat, never self-catabolizes.
+    timeout 30 python3 "$BALANCE_ORCHESTRATOR" >/dev/null 2>&1 &
 
     # Step 0.75: Check chunk hints for large files in the command
     local chunk_hint

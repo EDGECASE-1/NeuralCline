@@ -178,6 +178,26 @@ if [ "$ALERT_SEVERITY" -ge 2 ] 2>/dev/null; then
                 echo "[NeuralCline] 🧹 Removed stale task: $dir" >&2
             done
         fi
+        # Kill orphaned bash processes (keep only those matching session or parent)
+        STALE_BASH_COUNT=$(ps aux 2>/dev/null | grep -c "[b]ash" 2>/dev/null || echo 0)
+        if [ "$STALE_BASH_COUNT" -gt 10 ] 2>/dev/null; then
+            # Kill all bash processes except the current shell and its parent
+            CURRENT_PID=$$
+            # Find bash processes that are NOT the current shell, NOT the parent of this shell,
+            # and NOT the code-server terminal manager
+            ps aux --no-headers 2>/dev/null | grep "[b]ash" | awk '{print $2}' | while read pid; do
+                if [ "$pid" != "$CURRENT_PID" ] && [ "$pid" != "$PPID" ] 2>/dev/null; then
+                    # Check if this is a stale tool call (bash owned by root, not session leader)
+                    PGRP=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')
+                    SESS=$(ps -o sid= -p "$pid" 2>/dev/null | tr -d ' ')
+                    # Only kill if it's a child of the session (not the session leader itself)
+                    if [ -n "$PGRP" ] && [ "$PGRP" != "$SESS" ] 2>/dev/null; then
+                        kill -9 "$pid" 2>/dev/null
+                        echo "[NeuralCline] 🧹 Killed orphaned bash: PID $pid" >&2
+                    fi
+                fi
+            done
+        fi
         date +%s > "$LAST_CLEANUP_FILE"
     fi
 fi
