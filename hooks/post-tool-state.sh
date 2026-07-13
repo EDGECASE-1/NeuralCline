@@ -16,6 +16,7 @@ CRASH_BUFFER="/root/NeuralCline/lib/crash_buffer.py"
 FRONTIER_ENGINE="/root/NeuralCline/lib/frontier_analyzer.py"
 SMART_PREFETCH="/root/NeuralCline/hooks/smart_prefetch.sh"
 NERVOUS_SYSTEM="/root/NeuralCline/hooks/nervous_system_watchdog.sh"
+CACHE_SCANNER="/root/NeuralCline/hooks/cache_saturation_scanner.sh"
 SESSION_DIR="/root/.session-state"
 
 # ─── Spawn and forget — never wait for subprocesses ──────────────────────
@@ -90,6 +91,11 @@ main() {
 
     # 🧬 Step 0.5: Self-learning organism snapshot
     timeout 10 python3 "$SELF_LEARNING" snapshot >/dev/null 2>&1
+
+    # 🧠 Step 0.6: Cache saturation scan (async — never blocks main flow)
+    # Runs in < 100ms typical, detects stale task dirs, crash log bloat,
+    # hook latency cascading, and context saturation. Auto-cleans if needed.
+    timeout 5 bash "$CACHE_SCANNER" >/dev/null 2>&1 &
 
     # Step 0.75: Check chunk hints for large files in the command
     local chunk_hint
